@@ -1,0 +1,73 @@
+// styles/variables.scss
+// 导入tokens并导出CSS自定义属性
+
+@import './tokens.scss';
+
+// ==================== CSS自定义属性 ====================
+
+:root {
+  // 颜色
+  --color-primary: #{$color-primary};
+  --color-primary-light-3: #{$color-primary-light-3};
+  --color-primary-light-5: #{$color-primary-light-5};
+  --color-primary-light-7: #{$color-primary-light-7};
+  --color-primary-light-9: #{$color-primary-light-9};
+  --color-primary-dark-2: #{$color-primary-dark-2};
+
+  --color-success: #{$color-success};
+  --color-success-light: #{$color-success-light};
+  --color-warning: #{$color-warning};
+  --color-warning-light: #{$color-warning-light};
+  --color-danger: #{$color-danger};
+  --color-danger-light: #{$color-danger-light};
+  --color-info: #{$color-info};
+  --color-info-light: #{$color-info-light};
+
+  --sidebar-bg: #{$sidebar-bg};
+  --sidebar-text: #{$sidebar-text};
+  --sidebar-active-bg: #{$sidebar-active-bg};
+
+  --bg-page: #{$bg-page};
+  --bg-card: #{$bg-card};
+  --bg-table-header: #{$bg-table-header};
+  --bg-table-stripe: #{$bg-table-stripe};
+  --bg-table-hover: #{$bg-table-hover};
+
+  --border-color: #{$border-color};
+  --border-color-light: #{$border-color-light};
+  --input-border: #{$input-border};
+  --input-focus-border: #{$input-focus-border};
+
+  --text-primary: #{$text-primary};
+  --text-regular: #{$text-regular};
+  --text-secondary: #{$text-secondary};
+  --text-placeholder: #{$text-placeholder};
+
+  // 尺寸
+  --sidebar-width: #{$sidebar-width};
+  --sidebar-collapsed-width: #{$sidebar-collapsed-width};
+  --header-height: #{$header-height};
+  --content-padding: #{$content-padding};
+
+  --menu-item-height: #{$menu-item-height};
+  --submenu-item-height: #{$submenu-item-height};
+  --table-row-height: #{$table-row-height};
+  --table-header-height: #{$table-header-height};
+
+  // 字体
+  --font-family: #{$font-family};
+  --font-size-base: #{$font-size-base};
+  --font-size-stat: #{$font-size-stat};
+
+  // 圆角
+  --radius-base: #{$radius-base};
+  --radius-lg: #{$radius-lg};
+
+  // 阴影
+  --shadow-base: #{$shadow-base};
+  --shadow-md: #{$shadow-md};
+
+  // 过渡
+  --transition-fast: #{$transition-fast};
+  --transition-base: #{$transition-base};
+}

@@ -1,0 +1,97 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: suzaku-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-suzaku}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-suzaku_pass}
+      POSTGRES_DB: ${POSTGRES_DB:-suzaku_gaming}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-suzaku}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - suzaku-network
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: suzaku-redis
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - suzaku-network
+
+  # Backend API
+  backend:
+    build:
+      context: ./suzaku-gaming-server
+      dockerfile: Dockerfile
+    container_name: suzaku-backend
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://${POSTGRES_USER:-suzaku}:${POSTGRES_PASSWORD:-suzaku_pass}@postgres:5432/${POSTGRES_DB:-suzaku_gaming}
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: ${JWT_SECRET:-your-super-secret-jwt-key-change-in-production}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-2h}
+      TA_API_HOST: ${TA_API_HOST:-}
+      TA_PROJECT_TOKEN: ${TA_PROJECT_TOKEN:-}
+      TA_SYNC_ENABLED: ${TA_SYNC_ENABLED:-false}
+    ports:
+      - "3000:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    networks:
+      - suzaku-network
+
+  # Frontend Admin Panel
+  frontend:
+    build:
+      context: ./suzaku-gaming-admin
+      dockerfile: Dockerfile
+    container_name: suzaku-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - suzaku-network
+
+networks:
+  suzaku-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:

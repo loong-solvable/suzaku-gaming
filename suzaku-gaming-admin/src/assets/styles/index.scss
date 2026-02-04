@@ -1,0 +1,113 @@
+// styles/index.scss
+// 样式入口文件
+
+// 导入重置样式
+@import './reset.scss';
+
+// 导入变量（包含CSS自定义属性）
+@import './variables.scss';
+
+// Element Plus 样式导入在 main.ts 中处理
+
+// 全局工具类
+.text-primary {
+  color: var(--text-primary);
+}
+
+.text-regular {
+  color: var(--text-regular);
+}
+
+.text-secondary {
+  color: var(--text-secondary);
+}
+
+.text-danger {
+  color: var(--color-danger);
+}
+
+.text-success {
+  color: var(--color-success);
+}
+
+.text-warning {
+  color: var(--color-warning);
+}
+
+.font-bold {
+  font-weight: 700;
+}
+
+.font-semibold {
+  font-weight: 600;
+}
+
+// 布局工具类
+.flex {
+  display: flex;
+}
+
+.flex-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.flex-between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.flex-1 {
+  flex: 1;
+}
+
+// 间距工具类
+.mt-xs { margin-top: 4px; }
+.mt-sm { margin-top: 8px; }
+.mt-md { margin-top: 12px; }
+.mt-base { margin-top: 16px; }
+.mt-lg { margin-top: 20px; }
+
+.mb-xs { margin-bottom: 4px; }
+.mb-sm { margin-bottom: 8px; }
+.mb-md { margin-bottom: 12px; }
+.mb-base { margin-bottom: 16px; }
+.mb-lg { margin-bottom: 20px; }
+
+.ml-xs { margin-left: 4px; }
+.ml-sm { margin-left: 8px; }
+.ml-md { margin-left: 12px; }
+.ml-base { margin-left: 16px; }
+
+.mr-xs { margin-right: 4px; }
+.mr-sm { margin-right: 8px; }
+.mr-md { margin-right: 12px; }
+.mr-base { margin-right: 16px; }
+
+// 页面过渡动画
+.page-fade-enter-active,
+.page-fade-leave-active {
+  transition: opacity 0.3s ease;
+}
+
+.page-fade-enter-from,
+.page-fade-leave-to {
+  opacity: 0;
+}
+
+// 响应式提示
+@media (max-width: 1023px) {
+  .mobile-warning {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    background: #F0F2F5;
+    color: #606266;
+    font-size: 16px;
+    text-align: center;
+    padding: 20px;
+  }
+}

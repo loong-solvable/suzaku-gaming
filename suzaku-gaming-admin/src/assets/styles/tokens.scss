@@ -1,0 +1,167 @@
+// styles/tokens.scss
+// Suzaku Gaming Design Tokens
+// 生成日期: 2026-02-03
+
+// ==================== 颜色变量 ====================
+
+// 品牌色
+$color-primary: #409EFF;
+$color-primary-light-3: #79BBFF;
+$color-primary-light-5: #A0CFFF;
+$color-primary-light-7: #C6E2FF;
+$color-primary-light-9: #ECF5FF;
+$color-primary-dark-2: #337ECC;
+
+// 功能色
+$color-success: #67C23A;
+$color-success-light: #E1F3D8;
+$color-warning: #E6A23C;
+$color-warning-light: #FDF6EC;
+$color-danger: #F56C6C;
+$color-danger-light: #FEF0F0;
+$color-info: #909399;
+$color-info-light: #F4F4F5;
+
+// 侧边栏
+$sidebar-bg: #1e222d;
+$sidebar-text: #FFFFFF;
+$sidebar-text-secondary: #BFCBD9;
+$sidebar-active-bg: $color-primary;
+$sidebar-active-text: #FFFFFF;
+$sidebar-hover-bg: rgba(255, 255, 255, 0.05);
+$sidebar-submenu-bg: #1a1d26;
+
+// 背景色
+$bg-page: #F0F2F5;
+$bg-card: #FFFFFF;
+$bg-table-header: #FAFAFA;
+$bg-table-stripe: #FAFAFA;
+$bg-table-hover: #F5F7FA;
+$bg-input: #FFFFFF;
+$bg-disabled: #F5F7FA;
+
+// 边框色
+$border-color: #E4E7ED;
+$border-color-light: #EBEEF5;
+$border-color-lighter: #F2F6FC;
+$border-color-dark: #D4D7DE;
+$input-border: #DCDFE6;
+$input-focus-border: $color-primary;
+
+// 文字色
+$text-primary: #303133;
+$text-regular: #606266;
+$text-secondary: #909399;
+$text-placeholder: #C0C4CC;
+$text-disabled: #C0C4CC;
+$text-link: $color-primary;
+
+// ==================== 尺寸变量 ====================
+
+// 布局尺寸
+$sidebar-width: 220px;
+$sidebar-collapsed-width: 64px;
+$header-height: 56px;
+$content-padding: 16px;
+
+// 组件尺寸
+$menu-item-height: 50px;
+$submenu-item-height: 40px;
+$button-height: 32px;
+$button-height-lg: 40px;
+$button-height-sm: 24px;
+$input-height: 32px;
+$input-height-lg: 40px;
+$table-row-height: 52px;
+$table-header-height: 40px;
+$card-height: 120px;
+$avatar-size: 32px;
+$icon-size: 16px;
+$icon-size-lg: 20px;
+
+// 间距阶梯
+$spacing-none: 0;
+$spacing-xs: 4px;
+$spacing-sm: 8px;
+$spacing-md: 12px;
+$spacing-base: 16px;
+$spacing-lg: 20px;
+$spacing-xl: 24px;
+$spacing-xxl: 32px;
+
+// ==================== 字体变量 ====================
+
+$font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+              'Helvetica Neue', Arial, 'Noto Sans', sans-serif,
+              'Microsoft YaHei', '微软雅黑', 'PingFang SC';
+
+$font-size-xs: 12px;
+$font-size-sm: 13px;
+$font-size-base: 14px;
+$font-size-lg: 16px;
+$font-size-xl: 18px;
+$font-size-xxl: 20px;
+$font-size-stat: 28px;
+$font-size-stat-lg: 32px;
+
+$font-weight-normal: 400;
+$font-weight-medium: 500;
+$font-weight-semibold: 600;
+$font-weight-bold: 700;
+
+$line-height-xs: 18px;
+$line-height-sm: 20px;
+$line-height-base: 22px;
+$line-height-lg: 24px;
+$line-height-xl: 26px;
+
+// ==================== 圆角变量 ====================
+
+$radius-none: 0;
+$radius-sm: 2px;
+$radius-base: 4px;
+$radius-md: 6px;
+$radius-lg: 8px;
+$radius-xl: 12px;
+$radius-round: 20px;
+$radius-circle: 50%;
+
+// ==================== 阴影变量 ====================
+
+$shadow-none: none;
+$shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+$shadow-base: 0 2px 8px rgba(0, 0, 0, 0.06);
+$shadow-md: 0 2px 12px rgba(0, 0, 0, 0.1);
+$shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.12);
+$shadow-xl: 0 8px 24px rgba(0, 0, 0, 0.15);
+$shadow-table-fixed-left: 10px 0 10px -10px rgba(0, 0, 0, 0.12);
+$shadow-table-fixed-right: -10px 0 10px -10px rgba(0, 0, 0, 0.12);
+$shadow-header: 0 1px 4px rgba(0, 21, 41, 0.08);
+$shadow-dropdown: 0 2px 12px rgba(0, 0, 0, 0.12);
+
+// ==================== 过渡变量 ====================
+
+$transition-fast: 0.15s ease;
+$transition-base: 0.3s ease;
+$transition-slow: 0.5s ease;
+
+// ==================== 层级变量 ====================
+
+$z-index-base: 1;
+$z-index-dropdown: 10;
+$z-index-sticky: 20;
+$z-index-fixed: 30;
+$z-index-sidebar: 100;
+$z-index-header: 101;
+$z-index-modal-backdrop: 200;
+$z-index-modal: 201;
+$z-index-popover: 300;
+$z-index-tooltip: 400;
+$z-index-message: 500;
+$z-index-loading: 600;
+
+// ==================== 响应式断点 ====================
+
+$breakpoint-xl: 1440px;
+$breakpoint-lg: 1280px;
+$breakpoint-md: 1024px;

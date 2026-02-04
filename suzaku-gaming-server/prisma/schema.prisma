@@ -1,0 +1,380 @@
+// prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ==================== Admin User Table ====================
+model AdminUser {
+  id           Int       @id @default(autoincrement())
+  username     String    @unique @db.VarChar(50)
+  passwordHash String    @map("password_hash") @db.VarChar(255)
+  salt         String    @db.VarChar(64)
+  realName     String    @map("real_name") @db.VarChar(50)
+  role         String    @default("operator") @db.VarChar(20) // 保留现有字段: admin/manager/operator
+  avatar       String?   @db.VarChar(255)
+  status       Int       @default(1)
+  lastLoginAt  DateTime? @map("last_login_at")
+  lastLoginIp  String?   @map("last_login_ip") @db.VarChar(50)
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  // === 组织架构字段 (新增，与 role 并存) ===
+  level        Int       @default(2) // 0:admin, 1:leader, 2:member
+  parentId     Int?      @map("parent_id") // 上级ID
+  cpsGroupCode String?   @map("cps_group_code") @db.VarChar(50) // CPS 分组编码
+
+  // === 自关联 ===
+  parent       AdminUser?  @relation("UserHierarchy", fields: [parentId], references: [id])
+  subordinates AdminUser[] @relation("UserHierarchy")
+
+  auditLogs AuditLog[]
+
+  @@index([level])
+  @@index([parentId])
+  @@index([cpsGroupCode])
+  @@map("admin_users")
+}
+
+// ==================== Role Table ====================
+model Role {
+  // === 基础标识 ===
+  id                 Int       @id @default(autoincrement())
+  roleId             String    @unique @map("role_id") @db.VarChar(50)
+  userId             String?   @map("user_id") @db.VarChar(50) // 新增: ThinkingData 用户ID
+  accountId          String?   @map("account_id") @db.VarChar(50)
+
+  // === 角色信息 ===
+  roleName           String?   @map("role_name") @db.VarChar(100)
+  roleLevel          Int       @default(1) @map("role_level")
+  vipLevel           Int       @default(0) @map("vip_level")
+  combatPower        Int       @default(0) @map("combat_power") // 现有字段，保留
+  vipExp             Int       @default(0) @map("vip_exp") // 新增
+  headquartersLv     Int       @default(0) @map("headquarters_lv") // 新增
+
+  // === 服务器信息 ===
+  serverId           Int       @map("server_id")
+  serverName         String?   @map("server_name") @db.VarChar(50)
+  currentServerId    Int?      @map("current_server_id") // 新增
+  serverZoneOffset   Int?      @map("server_zone_offset") // 新增
+  serverAliveDays    Int?      @map("server_alive_days") // 新增
+
+  // === 地理信息 ===
+  country            String?   @db.VarChar(50)
+  countryCode        String?   @map("country_code") @db.VarChar(10)
+  city               String?   @db.VarChar(50)
+  province           String?   @db.VarChar(50)
+
+  // === 设备信息 ===
+  deviceType         String?   @map("device_type") @db.VarChar(20) // Android/iOS
+  deviceModel        String?   @map("device_model") @db.VarChar(100)
+  appVersion         String?   @map("app_version") @db.VarChar(20)
+  registerIp         String?   @map("register_ip") @db.VarChar(50)
+
+  // === 渠道信息 ===
+  channelId          Int?      @map("channel_id")
+  packageId          Int?      @map("package_id") // 新增
+
+  // === 充值数据 ===
+  totalRechargeUsd   Decimal   @default(0) @map("total_recharge_usd") @db.Decimal(12, 2)
+  totalRechargeCny   Decimal   @default(0) @map("total_recharge_cny") @db.Decimal(12, 2) // 新增
+  totalRechargeTimes Int       @default(0) @map("total_recharge_times")
+
+  // === 活跃数据 ===
+  totalLoginDays     Int       @default(0) @map("total_login_days")
+  totalOnlineTime    Int       @default(0) @map("total_online_time") // 秒
+
+  // === 联盟数据 ===
+  factionName        String?   @map("faction_name") @db.VarChar(100) // 新增
+  factionLevel       Int?      @map("faction_level") // 新增
+  factionExp         Int?      @map("faction_exp") // 新增
+
+  // === 游戏数据 (JSON) ===
+  gameBuildings      Json?     @map("game_buildings") // 新增: 建筑数据
+  gameResources      Json?     @map("game_resources") // 新增: 资源数据
+  gameStats          Json?     @map("game_stats") // 新增: 角色数值
+  gamePosition       Json?     @map("game_position") // 新增: 位置数据
+
+  // === CPS 归因字段 (新增) ===
+  tfMedium           String?   @map("tf_medium") @db.VarChar(100) // 流量来源
+  cpsGroup           String?   @map("cps_group") @db.VarChar(100) // CPS 分组
+  cpsBindTime        DateTime? @map("cps_bind_time") // 绑定时间
+  cpsBindBy          Int?      @map("cps_bind_by") // 绑定操作人ID
+
+  // === 时间戳 ===
+  registerTime       DateTime  @map("register_time")
+  lastLoginTime      DateTime? @map("last_login_time")
+  lastUpdateTime     DateTime? @map("last_update_time")
+  status             String    @default("active") @db.VarChar(20)
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
+
+  // === 关联 ===
+  orders      Order[]
+  cpsBindings CpsBinding[]
+
+  // === 索引 ===
+  @@index([serverId])
+  @@index([countryCode])
+  @@index([channelId])
+  @@index([packageId])
+  @@index([registerTime])
+  @@index([deviceType])
+  @@index([status])
+  @@index([userId])
+  @@index([cpsGroup])
+  @@map("roles")
+}
+
+// ==================== Order Table ====================
+model Order {
+  id             Int      @id @default(autoincrement())
+  orderId        String   @unique @map("order_id") @db.VarChar(100)
+  roleId         String   @map("role_id") @db.VarChar(50)
+
+  // === 角色快照 ===
+  roleName       String?  @map("role_name") @db.VarChar(100)
+  roleLevel      Int?     @map("role_level")
+  serverId       Int      @map("server_id")
+  serverName     String?  @map("server_name") @db.VarChar(50)
+  country        String?  @db.VarChar(50)
+  deviceType     String?  @map("device_type") @db.VarChar(20)
+  channelId      Int?     @map("channel_id")
+
+  // === 商品信息 ===
+  goodsId        String?  @map("goods_id") @db.VarChar(50)
+  goodsPrice     Decimal? @map("goods_price") @db.Decimal(12, 2)
+  goodsCurrency  String?  @map("goods_currency") @db.VarChar(10)
+
+  // === 支付信息 ===
+  payAmountUsd   Decimal  @map("pay_amount_usd") @db.Decimal(12, 2)
+  currencyType   String?  @map("currency_type") @db.VarChar(10)
+  currencyAmount Decimal? @map("currency_amount") @db.Decimal(12, 2)
+  rechargeType   String   @default("cash") @map("recharge_type") @db.VarChar(20) // 现有字段，保留
+  payChannel     String?  @map("pay_channel") @db.VarChar(20) // 现有字段，保留
+  isSandbox      Boolean  @default(false) @map("is_sandbox")
+
+  // === 奖励信息 (新增) ===
+  rewardInfo     Json?    @map("reward_info")
+  giftpackInfo   Json?    @map("giftpack_info")
+
+  // === 时间戳 ===
+  payTime        DateTime @map("pay_time")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  // === 关联 ===
+  role Role @relation(fields: [roleId], references: [roleId])
+
+  // === 索引 ===
+  @@index([roleId])
+  @@index([serverId])
+  @@index([payTime])
+  @@index([channelId])
+  @@index([isSandbox])
+  @@index([goodsId])
+  @@index([rechargeType])
+  @@map("orders")
+}
+
+// ==================== Daily Stats Table ====================
+model DailyStat {
+  id            Int      @id @default(autoincrement())
+  statDate      DateTime @unique @map("stat_date") @db.Date
+  newPlayers    Int      @default(0) @map("new_players")
+  activePlayers Int      @default(0) @map("active_players")
+  paidPlayers   Int      @default(0) @map("paid_players")
+  totalRevenue  Decimal  @default(0) @map("total_revenue") @db.Decimal(12, 2)
+  totalOrders   Int      @default(0) @map("total_orders")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  @@map("daily_stats")
+}
+
+// ==================== Binding Apply Table ====================
+model BindingApply {
+  id          Int       @id @default(autoincrement())
+  project     String    @db.VarChar(20) // 可用于 CPS: project='cps'
+  roleId      String    @map("role_id") @db.VarChar(50)
+  roleName    String?   @map("role_name") @db.VarChar(100)
+  serverId    Int       @map("server_id")
+  serverName  String?   @map("server_name") @db.VarChar(50)
+  platform    String?   @db.VarChar(50)
+  teamLeader  String?   @map("team_leader") @db.VarChar(50)
+  teamMember  String?   @map("team_member") @db.VarChar(50)
+  applicant   String    @db.VarChar(50)
+  status      String    @default("pending") @db.VarChar(20)
+  attachments Json?
+  remark      String?   @db.Text
+  applyTime   DateTime  @default(now()) @map("apply_time")
+  reviewTime  DateTime? @map("review_time")
+  reviewerId  Int?      @map("reviewer_id")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  @@index([status])
+  @@index([applicant])
+  @@index([applyTime])
+  @@index([project])
+  @@map("binding_applies")
+}
+
+// ==================== CPS Binding Table (新增) ====================
+model CpsBinding {
+  id              Int       @id @default(autoincrement())
+  roleId          String    @map("role_id") @db.VarChar(50)
+  accountId       String    @map("account_id") @db.VarChar(50)
+  cpsGroup        String    @map("cps_group") @db.VarChar(100) // CPS 分组
+  operatorId      Int       @map("operator_id") // 操作人ID
+  operatorType    String    @map("operator_type") @db.VarChar(20) // admin/leader/member
+  status          String    @default("active") @db.VarChar(20) // active/cancelled
+  attachments     Json? // 截图等附件
+  remark          String?   @db.Text
+  bindTime        DateTime  @default(now()) @map("bind_time")
+  unbindTime      DateTime? @map("unbind_time")
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  role Role @relation(fields: [roleId], references: [roleId])
+
+  @@index([roleId])
+  @@index([accountId])
+  @@index([cpsGroup])
+  @@index([operatorId])
+  @@index([status])
+  @@map("cps_bindings")
+}
+
+// ==================== CPS Bind Fail Log Table (新增) ====================
+model CpsBindFailLog {
+  id              Int       @id @default(autoincrement())
+  roleId          String?   @map("role_id") @db.VarChar(50) // 可能为空（仅有 accountId 的场景）
+  accountId       String?   @map("account_id") @db.VarChar(50) // 可能为空（仅有 roleId 的场景）
+  operatorId      Int       @map("operator_id")
+  failReason      String    @map("fail_reason") @db.VarChar(200) // 失败原因
+  tfMedium        String?   @map("tf_medium") @db.VarChar(100) // 查询到的 tf_medium 值
+  requestData     Json?     @map("request_data") // 请求数据快照
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  // 应用层校验: roleId 和 accountId 不能同时为空
+
+  @@index([roleId])
+  @@index([accountId])
+  @@index([operatorId])
+  @@index([createdAt])
+  @@map("cps_bind_fail_logs")
+}
+
+// ==================== CPS Recharge Log Table (新增) ====================
+model CpsRechargeLog {
+  id               Int      @id @default(autoincrement())
+  accountId        String   @map("account_id") @db.VarChar(50)
+  roleId           String?  @map("role_id") @db.VarChar(50)
+  roleName         String?  @map("role_name") @db.VarChar(100)
+  serverId         Int      @map("server_id")
+  serverName       String?  @map("server_name") @db.VarChar(50)
+  country          String?  @db.VarChar(50)
+  cpsGroup         String   @map("cps_group") @db.VarChar(100)
+  gameOrderId      String   @map("game_order_id") @db.VarChar(100) // 游戏订单号（必填，用于去重）
+  publisherOrderId String?  @map("publisher_order_id") @db.VarChar(100) // 发行商订单号（可能为空）
+  payAmountUsd     Decimal  @map("pay_amount_usd") @db.Decimal(12, 2)
+  rechargeType     String?  @map("recharge_type") @db.VarChar(20)
+  eventTime        DateTime @map("event_time")
+  syncBatch        String   @map("sync_batch") @db.VarChar(50) // 同步批次号
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  // publisherOrderId 可能为空，改用游戏订单号作为唯一键
+  @@unique([accountId, gameOrderId], name: "account_order_unique")
+  @@index([accountId])
+  @@index([cpsGroup])
+  @@index([eventTime])
+  @@index([syncBatch])
+  @@index([publisherOrderId])
+  @@map("cps_recharge_logs")
+}
+
+// ==================== CPS Login Log Table (新增) ====================
+model CpsLoginLog {
+  id              Int       @id @default(autoincrement())
+  accountId       String    @map("account_id") @db.VarChar(50)
+  roleId          String?   @map("role_id") @db.VarChar(50)
+  roleName        String?   @map("role_name") @db.VarChar(100)
+  serverId        Int       @map("server_id")
+  serverName      String?   @map("server_name") @db.VarChar(50)
+  country         String?   @db.VarChar(50)
+  cpsGroup        String    @map("cps_group") @db.VarChar(100)
+  lastLoginTime   DateTime  @map("last_login_time") // 最后登录时间
+  createTime      DateTime? @map("create_time") // 角色创建时间
+  eventTime       DateTime  @map("event_time") // 事件时间
+  syncBatch       String    @map("sync_batch") @db.VarChar(50) // 同步批次号
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  @@unique([accountId, syncBatch], name: "account_batch_unique") // 同一批次去重
+  @@index([accountId])
+  @@index([cpsGroup])
+  @@index([lastLoginTime])
+  @@index([syncBatch])
+  @@map("cps_login_logs")
+}
+
+// ==================== Audit Log Table ====================
+model AuditLog {
+  id        Int      @id @default(autoincrement())
+  adminId   Int      @map("admin_id")
+  action    String   @db.VarChar(50)
+  module    String   @db.VarChar(50)
+  target    String?  @db.VarChar(255)
+  oldValue  Json?    @map("old_value")
+  newValue  Json?    @map("new_value")
+  ip        String?  @db.VarChar(50)
+  userAgent String?  @map("user_agent") @db.VarChar(255)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  admin AdminUser @relation(fields: [adminId], references: [id])
+
+  @@index([adminId])
+  @@index([action])
+  @@index([module])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+// ==================== User Behavior Stats Table (ThinkingData Sync) ====================
+model UserBehaviorStat {
+  id            Int       @id @default(autoincrement())
+  userId        String    @map("user_id") @db.VarChar(50)
+  eventName     String    @map("event_name") @db.VarChar(50)
+  eventCount    Int       @default(0) @map("event_count")
+  eventDate     DateTime  @map("event_date") @db.Date
+  lastEventTime DateTime? @map("last_event_time")
+  source        String    @default("thinkingdata") @db.VarChar(30)
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  @@unique([userId, eventName, eventDate], name: "userId_eventName_eventDate")
+  @@index([eventDate])
+  @@index([eventName])
+  @@index([userId])
+  @@map("user_behavior_stats")
+}
+
+// ==================== Sync Log Table ====================
+model SyncLog {
+  id           Int      @id @default(autoincrement())
+  source       String   @db.VarChar(30)
+  targetDate   DateTime @map("target_date") @db.Date
+  status       String   @db.VarChar(20)
+  recordCount  Int?     @map("record_count")
+  duration     Int?
+  errorMessage String?  @map("error_message") @db.Text
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@index([source])
+  @@index([targetDate])
+  @@index([status])
+  @@map("sync_logs")
+}

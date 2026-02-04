@@ -1,0 +1,100 @@
+// styles/element.scss
+// Element Plus 变量覆盖
+
+@forward 'element-plus/theme-chalk/src/common/var.scss' with (
+  $colors: (
+    'primary': (
+      'base': #409EFF
+    ),
+    'success': (
+      'base': #67C23A
+    ),
+    'warning': (
+      'base': #E6A23C
+    ),
+    'danger': (
+      'base': #F56C6C
+    ),
+    'info': (
+      'base': #909399
+    )
+  ),
+  $text-color: (
+    'primary': #303133,
+    'regular': #606266,
+    'secondary': #909399,
+    'placeholder': #C0C4CC,
+    'disabled': #C0C4CC
+  ),
+  $border-color: (
+    '': #E4E7ED,
+    'light': #EBEEF5,
+    'lighter': #F2F6FC,
+    'dark': #D4D7DE
+  ),
+  $bg-color: (
+    '': #FFFFFF,
+    'page': #F0F2F5,
+    'overlay': #FFFFFF
+  ),
+  $fill-color: (
+    '': #F0F2F5,
+    'light': #F5F7FA,
+    'lighter': #FAFAFA,
+    'blank': #FFFFFF
+  )
+);
+
+// 菜单样式覆盖
+:root {
+  --el-menu-bg-color: #1e222d;
+  --el-menu-text-color: #FFFFFF;
+  --el-menu-active-color: #FFFFFF;
+  --el-menu-hover-bg-color: rgba(255, 255, 255, 0.05);
+  --el-menu-item-height: 50px;
+  --el-menu-sub-item-height: 40px;
+}
+
+// 表格样式覆盖
+.el-table {
+  --el-table-header-bg-color: #FAFAFA;
+  --el-table-header-text-color: #606266;
+  --el-table-row-hover-bg-color: #F5F7FA;
+  --el-table-border-color: #EBEEF5;
+
+  th.el-table__cell {
+    font-weight: 600;
+  }
+}
+
+// 分页样式覆盖
+.el-pagination {
+  --el-pagination-button-bg-color: #FFFFFF;
+  --el-pagination-hover-color: #409EFF;
+
+  &.is-background {
+    .el-pager li:not(.is-disabled).is-active {
+      background-color: #409EFF;
+    }
+  }
+}
+
+// 按钮样式微调
+.el-button {
+  --el-button-border-radius: 4px;
+}
+
+// 输入框样式微调
+.el-input {
+  --el-input-border-radius: 4px;
+}
+
+// 卡片样式
+.el-card {
+  --el-card-border-radius: 8px;
+}
+
+// 消息提示时长配置
+.el-message {
+  --el-message-close-size: 16px;
+}

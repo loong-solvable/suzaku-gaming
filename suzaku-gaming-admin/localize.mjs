@@ -1,0 +1,165 @@
+import { readFileSync, writeFileSync } from 'fs';
+
+const replacements = {
+  'src/components/layout/Sidebar/index.vue': [
+    ['"Dashboard"', '"概要面板"'],
+    ['"Player Data"', '"玩家数据"'],
+    ['"Role List"', '"角色列表"'],
+    ['"Order List"', '"订单列表"'],
+    ['"Audit"', '"审核管理"'],
+    ['"Binding Apply"', '"绑定申请"'],
+    ['"New Attribution"', '"新增归因更改"'],
+    ['Suzaku Gaming', '朱雀游戏后台'],
+    ['>SG<', '>朱雀<'],
+  ],
+  'src/components/layout/Header/index.vue': [
+    ['Profile', '个人中心'],
+    ['Logout', '退出登录'],
+  ],
+  'src/router/index.ts': [
+    ['"Dashboard"', '"概要面板"'],
+    ['"Player Data"', '"玩家数据"'],
+    ['"Role List"', '"角色列表"'],
+    ['"Order List"', '"订单列表"'],
+    ['"Audit"', '"审核管理"'],
+    ['"Binding Apply"', '"绑定申请"'],
+    ['"New Attribution"', '"新增归因更改"'],
+    ['Suzaku Gaming Admin', '朱雀游戏后台'],
+  ],
+  'index.html': [
+    ['lang="en"', 'lang="zh-CN"'],
+    ['<title>Vite + Vue + TS</title>', '<title>朱雀游戏后台</title>'],
+  ],
+  'src/views/Dashboard/index.vue': [
+    ['"New Players"', '"新增玩家"'],
+    ['"Active Players"', '"活跃玩家"'],
+    ['"Paid Players"', '"付费玩家"'],
+    ['"Paid Amount"', '"充值金额"'],
+    ['"Today"', '"今日"'],
+    ['"This Month"', '"本月"'],
+    ['"Total"', '"历史累计"'],
+    ['"persons"', '"人"'],
+    ['"Failed to load data"', '"加载数据失败"'],
+  ],
+  'src/components/common/FilterBar/index.vue': [
+    ['"Enter"', '"请输入"'],
+    ['"Select"', '"请选择"'],
+    ['"to"', '"至"'],
+    ['"Start date"', '"开始日期"'],
+    ['"End date"', '"结束日期"'],
+    ['>Search<', '>查询<'],
+    ['>Clear<', '>清空<'],
+    ['>Export<', '>导出<'],
+  ],
+  'src/components/common/DataTable/index.vue': [
+    ['"No Data"', '"暂无数据"'],
+  ],
+  'src/components/common/ImageUpload/index.vue': [
+    ['"Only jpg/png format is supported"', '"只支持 jpg/png 格式"'],
+    ['`File size cannot exceed ${props.maxSize} KB`', '`文件大小不能超过 ${props.maxSize} KB`'],
+    ['`You can only upload ${props.maxCount} files`', '`最多只能上传 ${props.maxCount} 个文件`'],
+    ['Only jpg/png format, single file not exceeding', '只支持 jpg/png 格式，单个文件不超过'],
+    ['files max', '个文件'],
+  ],
+  'src/views/PlayerData/RoleList.vue': [
+    ['"Role ID"', '"角色ID"'],
+    ['"Role Name"', '"角色名称"'],
+    ['"Server"', '"服务器"'],
+    ['"Account"', '"账号"'],
+    ['"Status"', '"状态"'],
+    ['"Channel"', '"渠道"'],
+    ['"Device"', '"设备"'],
+    ['"Country"', '"国家"'],
+    ['"Register Time"', '"注册时间"'],
+    ['"Last Login"', '"最后登录"'],
+    ['"Level"', '"等级"'],
+    ['"Total Recharge"', '"累计充值"'],
+    ['"Actions"', '"操作"'],
+    ['"Active"', '"活跃"'],
+    ['"Banned"', '"封禁"'],
+    ['"Inactive"', '"非活跃"'],
+    ['"Direct"', '"直接"'],
+    ['"Organic"', '"自然"'],
+    ['"USA"', '"美国"'],
+    ['"China"', '"中国"'],
+    ['"Japan"', '"日本"'],
+    ['"Korea"', '"韩国"'],
+    ['>View<', '>查看<'],
+    ['>Edit<', '>编辑<'],
+    ['"Exporting CSV..."', '"正在导出CSV..."'],
+    ['"Failed to load data"', '"加载数据失败"'],
+  ],
+  'src/views/PlayerData/OrderList.vue': [
+    ['"Order ID"', '"订单ID"'],
+    ['"Order Type"', '"订单类型"'],
+    ['"Recharge"', '"充值"'],
+    ['"Purchase"', '"购买"'],
+    ['"Subscription"', '"订阅"'],
+    ['"Success"', '"成功"'],
+    ['"Pending"', '"待处理"'],
+    ['"Failed"', '"失败"'],
+    ['"Pay Time"', '"充值时间"'],
+    ['"Type"', '"类型"'],
+    ['"Amount"', '"金额"'],
+    ['"Player "', '"玩家"'],
+  ],
+  'src/views/Audit/BindingApply.vue': [
+    ['"Apply ID"', '"申请ID"'],
+    ['"Bind Type"', '"绑定类型"'],
+    ['"Apply Time"', '"申请时间"'],
+    ['"Pending"', '"待审核"'],
+    ['"Approved"', '"已通过"'],
+    ['"Rejected"', '"已拒绝"'],
+    ['"Email"', '"邮箱"'],
+    ['"Phone"', '"手机"'],
+    ['"ID Card"', '"身份证"'],
+    ['"Remark"', '"备注"'],
+    ['>View<', '>查看<'],
+    ['>Delete<', '>删除<'],
+    ['"Are you sure you want to delete this record?"', '"确定要删除这条记录吗？"'],
+    ['"Warning"', '"提示"'],
+    ['"Confirm"', '"确定"'],
+    ['"Cancel"', '"取消"'],
+    ['"Deleted successfully"', '"删除成功"'],
+    ['"Apply Remark "', '"申请备注"'],
+    ['"Attribution Change Apply"', '"归因修改申请"'],
+    ['"Apply Details"', '"申请详情"'],
+  ],
+  'src/views/Audit/NewAttribution.vue': [
+    ['"Please enter role ID"', '"请输入角色ID"'],
+    ['"Please enter role name"', '"请输入角色名称"'],
+    ['"Please enter current attribution"', '"请输入当前归因"'],
+    ['"Please enter new attribution"', '"请输入新归因"'],
+    ['"Please enter reason"', '"请输入变更原因"'],
+    ['"Please enter contact email"', '"请输入联系邮箱"'],
+    ['"Please enter a valid email address"', '"请输入有效的邮箱地址"'],
+    ['"New Attribution Change Apply"', '"新增归因更改申请"'],
+    ['"Current Attribution"', '"当前归因"'],
+    ['"New Attribution"', '"新归因"'],
+    ['"Reason"', '"变更原因"'],
+    ['"Contact Email"', '"联系邮箱"'],
+    ['"Evidence Screenshots"', '"证明截图"'],
+    ['>Submit<', '>提交<'],
+    ['>Reset<', '>重置<'],
+    ['"Submitted successfully!"', '"提交成功！"'],
+  ],
+  'src/composables/useSubmitLock.ts': [
+    ['"Submitting, please wait..."', '"正在提交中，请稍候..."'],
+    ['"Operating too frequently, please try again later"', '"操作太频繁，请稍后再试"'],
+  ],
+};
+
+for (const [file, pairs] of Object.entries(replacements)) {
+  try {
+    let content = readFileSync(file, 'utf-8');
+    for (const [from, to] of pairs) {
+      content = content.split(from).join(to);
+    }
+    writeFileSync(file, content, 'utf-8');
+    console.log(`Updated: ${file}`);
+  } catch (err) {
+    console.error(`Error processing ${file}:`, err.message);
+  }
+}
+
+console.log('Localization complete!');

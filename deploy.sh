@@ -116,32 +116,61 @@ install_docker_compose() {
 
     print_info "正在安装 Docker Compose..."
     
-    # 获取最新版本
-    COMPOSE_VERSION="v2.24.0"
+    # 使用 v1.29.2 版本（兼容性好，是 Python 版本的最后稳定版）
+    COMPOSE_VERSION="1.29.2"
     
-    # 下载
-    curl -L "https://github.com/docker/compose/releases/download/${COMPOSE_VERSION}/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-    chmod +x /usr/local/bin/docker-compose
+    # 尝试从多个镜像源下载
+    DOWNLOAD_URLS=(
+        "https://get.daocloud.io/docker/compose/releases/download/${COMPOSE_VERSION}/docker-compose-$(uname -s)-$(uname -m)"
+        "https://github.com/docker/compose/releases/download/${COMPOSE_VERSION}/docker-compose-$(uname -s)-$(uname -m)"
+    )
     
-    # 如果下载失败，尝试使用 pip 安装
-    if ! command -v docker-compose &> /dev/null; then
-        print_warning "二进制安装失败，尝试使用 pip 安装..."
-        if command -v pip &> /dev/null; then
-            pip install docker-compose
-        elif command -v pip3 &> /dev/null; then
-            pip3 install docker-compose
-        else
-            # 安装 pip
-            if [ "$OS" = "centos" ] || [ "$OS" = "rhel" ]; then
-                yum install -y python-pip 2>/dev/null || yum install -y python3-pip
-            else
-                apt-get install -y python3-pip
+    for url in "${DOWNLOAD_URLS[@]}"; do
+        print_info "尝试下载: $url"
+        if curl -L --connect-timeout 30 --max-time 300 "$url" -o /usr/local/bin/docker-compose 2>/dev/null; then
+            chmod +x /usr/local/bin/docker-compose
+            if /usr/local/bin/docker-compose --version &> /dev/null; then
+                print_success "Docker Compose 安装完成"
+                docker-compose --version
+                return 0
             fi
-            pip3 install docker-compose
         fi
+        print_warning "下载失败，尝试下一个源..."
+    done
+    
+    # 如果二进制下载都失败，尝试安装 docker-compose-plugin
+    print_warning "二进制安装失败，尝试安装 Docker Compose 插件..."
+    if [ "$OS" = "centos" ] || [ "$OS" = "rhel" ]; then
+        yum install -y docker-compose-plugin 2>/dev/null || true
+    else
+        apt-get install -y docker-compose-plugin 2>/dev/null || true
     fi
     
-    print_success "Docker Compose 安装完成"
+    # 再次检查 docker compose 插件
+    if docker compose version &> /dev/null; then
+        echo '#!/bin/bash' > /usr/local/bin/docker-compose
+        echo 'docker compose "$@"' >> /usr/local/bin/docker-compose
+        chmod +x /usr/local/bin/docker-compose
+        print_success "Docker Compose 插件安装完成"
+        return 0
+    fi
+    
+    # 最后尝试 pip 安装旧版本（兼容 Python 3.6）
+    print_warning "尝试使用 pip 安装兼容版本..."
+    if [ "$OS" = "centos" ] || [ "$OS" = "rhel" ]; then
+        yum install -y python3-pip 2>/dev/null || yum install -y python-pip
+    fi
+    
+    # 安装不需要 rust 编译的旧版本
+    pip3 install 'docker-compose==1.26.2' 2>/dev/null || pip install 'docker-compose==1.26.2' 2>/dev/null || true
+    
+    if command -v docker-compose &> /dev/null; then
+        print_success "Docker Compose 安装完成"
+        docker-compose --version
+    else
+        print_error "Docker Compose 安装失败，请手动安装"
+        exit 1
+    fi
 }
 
 # 配置 Docker 镜像加速

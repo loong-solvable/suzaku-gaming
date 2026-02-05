@@ -26,19 +26,45 @@ export class QueryOrdersDto {
 
   @ApiPropertyOptional()
   @IsOptional()
+  @IsString()
+  roleName?: string;
+
+  @ApiPropertyOptional({ description: '服务器ID或名称' })
+  @IsOptional()
+  @IsString()
+  server?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
   @Type(() => Number)
   @IsInt()
   serverId?: number;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ description: '系统类型: ios/android/iOS/Android' })
   @IsOptional()
   @IsString()
   system?: string;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ description: '订单类型/充值类型' })
   @IsOptional()
   @IsString()
   orderType?: string;
+
+  @ApiPropertyOptional({ description: '渠道ID' })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  channelId?: number;
+
+  @ApiPropertyOptional({ description: '支付时间开始 (YYYY-MM-DD)' })
+  @IsOptional()
+  @IsString()
+  payTimeStart?: string;
+
+  @ApiPropertyOptional({ description: '支付时间结束 (YYYY-MM-DD)' })
+  @IsOptional()
+  @IsString()
+  payTimeEnd?: string;
 
   @ApiPropertyOptional()
   @IsOptional()

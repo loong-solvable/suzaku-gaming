@@ -62,4 +62,11 @@ export class PlayerController {
     // BOM for Excel compatibility
     res.send('\ufeff' + csv);
   }
+
+  @Get('filter-options')
+  @Public()
+  @ApiOperation({ summary: '获取筛选选项（区服、系统、订单类型等）' })
+  async getFilterOptions() {
+    return this.playerService.getFilterOptions();
+  }
 }

@@ -51,16 +51,23 @@ const fetchData = async () => {
       pageSize: String(pagination.value.pageSize)
     });
     
-    // 添加筛选参数
+    // 添加筛选参数（排除前端专用参数）
+    const frontendOnlyKeys = ['timezone', 'gameProject', 'channel1', 'channel2', 'channel3'];
     Object.entries(filterParams.value).forEach(([key, value]) => {
-      if (value !== undefined && value !== null && value !== '') {
-        if (Array.isArray(value) && value.length === 2) {
+      // 跳过空值、空字符串、空数组、前端专用参数
+      if (value === undefined || value === null || value === '') return;
+      if (frontendOnlyKeys.includes(key)) return;
+      if (Array.isArray(value)) {
+        // 日期范围：需要两个有效值
+        if (value.length === 2 && value[0] && value[1]) {
           params.append(key + 'Start', String(value[0]));
           params.append(key + 'End', String(value[1]));
-        } else {
-          params.append(key, String(value));
         }
+        // 空数组或不完整的日期范围，跳过
+        return;
       }
+      // 普通值
+      params.append(key, String(value));
     });
 
     // 添加排序参数

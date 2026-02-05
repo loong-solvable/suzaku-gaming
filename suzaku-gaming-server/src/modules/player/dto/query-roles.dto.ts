@@ -29,13 +29,18 @@ export class QueryRolesDto {
   @IsString()
   roleName?: string;
 
+  @ApiPropertyOptional({ description: '服务器ID或名称' })
+  @IsOptional()
+  @IsString()
+  server?: string;
+
   @ApiPropertyOptional()
   @IsOptional()
   @Type(() => Number)
   @IsInt()
   serverId?: number;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ description: '系统类型: ios/android/iOS/Android' })
   @IsOptional()
   @IsString()
   system?: string;
@@ -44,6 +49,27 @@ export class QueryRolesDto {
   @IsOptional()
   @IsString()
   status?: string;
+
+  @ApiPropertyOptional({ description: '渠道ID' })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  channelId?: number;
+
+  @ApiPropertyOptional({ description: '国家代码' })
+  @IsOptional()
+  @IsString()
+  countryCode?: string;
+
+  @ApiPropertyOptional({ description: '注册时间开始 (YYYY-MM-DD)' })
+  @IsOptional()
+  @IsString()
+  registerTimeStart?: string;
+
+  @ApiPropertyOptional({ description: '注册时间结束 (YYYY-MM-DD)' })
+  @IsOptional()
+  @IsString()
+  registerTimeEnd?: string;
 
   @ApiPropertyOptional()
   @IsOptional()

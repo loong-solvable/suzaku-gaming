@@ -38,34 +38,42 @@ const filterValues = reactive<FilterValues>({
 });
 
 const gameProjectOptions = [
-  { label: "项目1", value: "project1" },
-  { label: "项目2", value: "project2" }
+  { label: "朱雀", value: "suzaku" }
 ];
 
 const serverOptions = [
-  { label: "服务器1", value: "server1" },
-  { label: "服务器2", value: "server2" }
+  { label: "S17", value: "17" },
+  { label: "S18", value: "18" },
+  { label: "S20", value: "20" },
+  { label: "S21", value: "21" },
+  { label: "S22", value: "22" },
+  { label: "S23", value: "23" },
+  { label: "S26", value: "26" },
+  { label: "S27", value: "27" },
+  { label: "S28", value: "28" },
+  { label: "S29", value: "29" },
+  { label: "S30", value: "30" },
+  { label: "S31", value: "31" }
 ];
 
-const channelOptions = [
-  { label: "Google", value: "google" },
-  { label: "Facebook", value: "facebook" }
-];
+// 渠道选项（目前数据中暂无渠道信息，保留空选项）
+const channelOptions: Array<{ label: string; value: string }> = [];
 
 const orderTypeOptions = [
-  { label: "充值", value: "recharge" },
-  { label: "购买", value: "purchase" },
-  { label: "订阅", value: "subscription" }
+  { label: "现金充值", value: "cash" }
 ];
 
 const systemOptions = [
-  { label: "iOS", value: "ios" },
-  { label: "Android", value: "android" }
+  { label: "iOS", value: "iOS" },
+  { label: "Android", value: "Android" }
 ];
 
 const timezoneOptions = [
-  { label: "UTC+8", value: "UTC+8" },
-  { label: "UTC+0", value: "UTC+0" }
+  { label: "UTC+8 (北京)", value: "+08:00" },
+  { label: "UTC+9 (东京)", value: "+09:00" },
+  { label: "UTC+0 (伦敦)", value: "+00:00" },
+  { label: "UTC-5 (纽约)", value: "-05:00" },
+  { label: "UTC-8 (洛杉矶)", value: "-08:00" }
 ];
 
 const handleSearch = () => {

@@ -33,12 +33,36 @@ export class AuditService {
   constructor(private prisma: PrismaService) {}
 
   async getBindingApplies(query: QueryBindingAppliesDto) {
-    const { page = 1, pageSize = 20, project, roleId, applicant, status } = query;
+    const {
+      page = 1,
+      pageSize = 20,
+      project,
+      gameProject,
+      server,
+      roleId,
+      applicant,
+      status,
+      applyTimeStart,
+      applyTimeEnd,
+      sortBy,
+      sortOrder,
+    } = query;
 
     const where: any = {};
 
-    if (project) {
-      where.project = project;
+    // 支持 project 或 gameProject 参数
+    const projectFilter = project || gameProject;
+    if (projectFilter) {
+      where.project = projectFilter;
+    }
+    // 服务器筛选
+    if (server) {
+      const parsedServerId = parseInt(server, 10);
+      if (!isNaN(parsedServerId)) {
+        where.serverId = parsedServerId;
+      } else {
+        where.serverName = { contains: server };
+      }
     }
     if (roleId) {
       where.roleId = { contains: roleId };
@@ -49,11 +73,31 @@ export class AuditService {
     if (status) {
       where.status = status;
     }
+    // 申请时间范围筛选
+    if (applyTimeStart || applyTimeEnd) {
+      where.applyTime = {};
+      if (applyTimeStart) {
+        where.applyTime.gte = new Date(applyTimeStart);
+      }
+      if (applyTimeEnd) {
+        const endDate = new Date(applyTimeEnd);
+        endDate.setDate(endDate.getDate() + 1);
+        where.applyTime.lt = endDate;
+      }
+    }
+
+    // 排序
+    const orderBy: any = {};
+    if (sortBy) {
+      orderBy[sortBy] = sortOrder || 'desc';
+    } else {
+      orderBy.applyTime = 'desc';
+    }
 
     const [list, total] = await Promise.all([
       this.prisma.bindingApply.findMany({
         where,
-        orderBy: { applyTime: 'desc' },
+        orderBy,
         skip: (page - 1) * pageSize,
         take: pageSize,
       }),
@@ -183,12 +227,30 @@ export class AuditService {
    * 导出绑定申请列表为 CSV
    */
   async exportBindingApplies(query: QueryBindingAppliesDto): Promise<string> {
-    const { project, roleId, applicant, status } = query;
+    const {
+      project,
+      gameProject,
+      server,
+      roleId,
+      applicant,
+      status,
+      applyTimeStart,
+      applyTimeEnd,
+    } = query;
 
     const where: any = {};
 
-    if (project) {
-      where.project = project;
+    const projectFilter = project || gameProject;
+    if (projectFilter) {
+      where.project = projectFilter;
+    }
+    if (server) {
+      const parsedServerId = parseInt(server, 10);
+      if (!isNaN(parsedServerId)) {
+        where.serverId = parsedServerId;
+      } else {
+        where.serverName = { contains: server };
+      }
     }
     if (roleId) {
       where.roleId = { contains: roleId };
@@ -198,6 +260,17 @@ export class AuditService {
     }
     if (status) {
       where.status = status;
+    }
+    if (applyTimeStart || applyTimeEnd) {
+      where.applyTime = {};
+      if (applyTimeStart) {
+        where.applyTime.gte = new Date(applyTimeStart);
+      }
+      if (applyTimeEnd) {
+        const endDate = new Date(applyTimeEnd);
+        endDate.setDate(endDate.getDate() + 1);
+        where.applyTime.lt = endDate;
+      }
     }
 
     // 获取全部数据（导出时不分页，但限制最大数量）

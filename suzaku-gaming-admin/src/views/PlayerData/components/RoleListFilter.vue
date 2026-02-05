@@ -36,23 +36,30 @@ const filterValues = reactive<FilterValues>({
 });
 
 const gameProjectOptions = [
-  { label: "项目1", value: "project1" },
-  { label: "项目2", value: "project2" }
+  { label: "朱雀", value: "suzaku" }
 ];
 
 const serverOptions = [
-  { label: "服务器1", value: "server1" },
-  { label: "服务器2", value: "server2" }
+  { label: "S17", value: "17" },
+  { label: "S18", value: "18" },
+  { label: "S20", value: "20" },
+  { label: "S21", value: "21" },
+  { label: "S22", value: "22" },
+  { label: "S23", value: "23" },
+  { label: "S26", value: "26" },
+  { label: "S27", value: "27" },
+  { label: "S28", value: "28" },
+  { label: "S29", value: "29" },
+  { label: "S30", value: "30" },
+  { label: "S31", value: "31" }
 ];
 
-const channelOptions = [
-  { label: "Google", value: "google" },
-  { label: "Facebook", value: "facebook" }
-];
+// 渠道选项（目前数据中暂无渠道信息，保留空选项）
+const channelOptions: Array<{ label: string; value: string }> = [];
 
 const systemOptions = [
-  { label: "iOS", value: "ios" },
-  { label: "Android", value: "android" }
+  { label: "iOS", value: "iOS" },
+  { label: "Android", value: "Android" }
 ];
 
 const timezoneOptions = [
@@ -112,6 +119,7 @@ const timezoneOptions = [
 ];
 
 const handleSearch = () => {
+  console.log("handleSearch called, filterValues:", JSON.stringify(filterValues));
   emit("search", { ...filterValues });
 };
 

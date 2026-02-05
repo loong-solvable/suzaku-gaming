@@ -19,10 +19,20 @@ export class QueryBindingAppliesDto {
   @Max(100)
   pageSize?: number = 20;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ description: '游戏项目' })
   @IsOptional()
   @IsString()
   project?: string;
+
+  @ApiPropertyOptional({ description: '游戏项目 (别名)' })
+  @IsOptional()
+  @IsString()
+  gameProject?: string;
+
+  @ApiPropertyOptional({ description: '服务器ID或名称' })
+  @IsOptional()
+  @IsString()
+  server?: string;
 
   @ApiPropertyOptional()
   @IsOptional()
@@ -38,4 +48,24 @@ export class QueryBindingAppliesDto {
   @IsOptional()
   @IsString()
   status?: string;
+
+  @ApiPropertyOptional({ description: '申请时间开始 (YYYY-MM-DD)' })
+  @IsOptional()
+  @IsString()
+  applyTimeStart?: string;
+
+  @ApiPropertyOptional({ description: '申请时间结束 (YYYY-MM-DD)' })
+  @IsOptional()
+  @IsString()
+  applyTimeEnd?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  sortBy?: string;
+
+  @ApiPropertyOptional({ enum: ['asc', 'desc'] })
+  @IsOptional()
+  @IsString()
+  sortOrder?: 'asc' | 'desc';
 }

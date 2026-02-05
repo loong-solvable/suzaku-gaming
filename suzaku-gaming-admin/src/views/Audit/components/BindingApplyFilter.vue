@@ -29,13 +29,23 @@ const filterValues = reactive<FilterValues>({
 });
 
 const gameProjectOptions = [
-  { label: "项目1", value: "project1" },
-  { label: "项目2", value: "project2" }
+  { label: "朱雀", value: "suzaku" },
+  { label: "JUR", value: "JUR" }
 ];
 
 const serverOptions = [
-  { label: "服务器1", value: "server1" },
-  { label: "服务器2", value: "server2" }
+  { label: "S17", value: "17" },
+  { label: "S18", value: "18" },
+  { label: "S20", value: "20" },
+  { label: "S21", value: "21" },
+  { label: "S22", value: "22" },
+  { label: "S23", value: "23" },
+  { label: "S26", value: "26" },
+  { label: "S27", value: "27" },
+  { label: "S28", value: "28" },
+  { label: "S29", value: "29" },
+  { label: "S30", value: "30" },
+  { label: "S31", value: "31" }
 ];
 
 const statusOptions = [

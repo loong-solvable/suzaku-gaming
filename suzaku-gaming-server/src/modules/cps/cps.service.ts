@@ -27,6 +27,15 @@ interface TAQueryResponse {
   };
 }
 
+// 当前用户接口
+interface CurrentUser {
+  id: number;
+  username: string;
+  role: string;
+  level?: number;
+  cpsGroupCode?: string;
+}
+
 @Injectable()
 export class CpsService {
   private readonly logger = new Logger(CpsService.name);
@@ -45,6 +54,51 @@ export class CpsService {
     this.userView = this.configService.get<string>('TA_USER_VIEW') || 'ta.v_user_22';
     this.eventView = this.configService.get<string>('TA_EVENT_VIEW') || 'v_event_22';
     this.cpsDimTable = this.configService.get<string>('TA_CPS_DIM_TABLE') || 'ta_dim.dim_22_0_518509';
+  }
+
+  /**
+   * 构建数据隔离过滤条件（绑定相关）
+   * Admin: 可查看所有数据
+   * Manager: 只能查看本组数据（按 cpsGroup 过滤）
+   * Operator: 只能查看自己创建的数据（按 operatorId 过滤）
+   */
+  private buildDataFilter(currentUser?: CurrentUser, query: any = {}): any {
+    if (!currentUser) return {};
+
+    // Admin (level === 0) 可以使用任何过滤条件
+    if (typeof currentUser.level === 'number' && currentUser.level === 0) {
+      return query.cpsGroup ? { cpsGroup: query.cpsGroup } : {};
+    }
+
+    // Manager (level === 1): 强制按 cpsGroup 过滤，忽略传入参数
+    if (typeof currentUser.level === 'number' && currentUser.level === 1) {
+      return { cpsGroup: currentUser.cpsGroupCode };
+    }
+
+    // Operator (level === 2): 强制按 operatorId 过滤
+    return { operatorId: currentUser.id };
+  }
+
+  /**
+   * 构建 CPS 数据过滤条件（充值/登录日志）
+   * Admin: 可查看所有数据
+   * Manager: 只能查看本组数据
+   * Operator: 只能查看本组数据（与 Manager 相同）
+   */
+  private buildCpsGroupFilter(currentUser?: CurrentUser, query: any = {}): any {
+    if (!currentUser) return {};
+
+    // Admin (level === 0) 可以使用任何过滤条件
+    if (typeof currentUser.level === 'number' && currentUser.level === 0) {
+      return query.cpsGroup ? { cpsGroup: query.cpsGroup } : {};
+    }
+
+    // Manager/Operator: 强制按 cpsGroup 过滤
+    if (currentUser.cpsGroupCode) {
+      return { cpsGroup: currentUser.cpsGroupCode };
+    }
+
+    return {};
   }
 
   // ===== 绑定判断 =====
@@ -209,7 +263,7 @@ export class CpsService {
    * 执行 ThinkingData SQL 查询
    */
   private async executeQuery(sql: string): Promise<TAQueryResponse> {
-    const url = `${this.apiHost}/open/v1/query_sql`;
+    const url = `${this.apiHost}/querySql`;
 
     const params = new URLSearchParams({
       token: this.projectToken,
@@ -364,15 +418,19 @@ export class CpsService {
   /**
    * 查询绑定列表
    */
-  async getBindings(dto: QueryBindingsDto) {
+  async getBindings(dto: QueryBindingsDto, currentUser?: CurrentUser) {
     const { roleId, accountId, cpsGroup, operatorId, status, startTime, endTime, page = 1, pageSize = 20 } = dto;
 
-    const where: any = {};
+    // 应用数据隔离过滤
+    const dataFilter = this.buildDataFilter(currentUser, { cpsGroup });
+    const where: any = { ...dataFilter };
 
     if (roleId) where.roleId = roleId;
     if (accountId) where.accountId = accountId;
-    if (cpsGroup) where.cpsGroup = cpsGroup;
-    if (operatorId) where.operatorId = operatorId;
+    // cpsGroup 由 dataFilter 处理
+    if (!dataFilter.cpsGroup && cpsGroup) where.cpsGroup = cpsGroup;
+    // operatorId 由 dataFilter 处理
+    if (!dataFilter.operatorId && operatorId) where.operatorId = operatorId;
     if (status) where.status = status;
 
     if (startTime || endTime) {
@@ -412,14 +470,17 @@ export class CpsService {
   /**
    * 查询绑定失败日志
    */
-  async getFailLogs(dto: QueryFailLogsDto) {
+  async getFailLogs(dto: QueryFailLogsDto, currentUser?: CurrentUser) {
     const { roleId, accountId, operatorId, startTime, endTime, page = 1, pageSize = 20 } = dto;
 
-    const where: any = {};
+    // 应用数据隔离过滤
+    const dataFilter = this.buildDataFilter(currentUser);
+    const where: any = { ...dataFilter };
 
     if (roleId) where.roleId = roleId;
     if (accountId) where.accountId = accountId;
-    if (operatorId) where.operatorId = operatorId;
+    // operatorId 由 dataFilter 处理
+    if (!dataFilter.operatorId && operatorId) where.operatorId = operatorId;
 
     if (startTime || endTime) {
       where.createdAt = {};
@@ -448,13 +509,16 @@ export class CpsService {
   /**
    * 查询充值日志
    */
-  async getRechargeLogs(dto: QueryRechargeLogsDto) {
+  async getRechargeLogs(dto: QueryRechargeLogsDto, currentUser?: CurrentUser) {
     const { accountId, cpsGroup, serverId, startTime, endTime, syncBatch, page = 1, pageSize = 20 } = dto;
 
-    const where: any = {};
+    // 应用数据隔离过滤（CPS 充值日志按 cpsGroup 过滤）
+    const dataFilter = this.buildCpsGroupFilter(currentUser, { cpsGroup });
+    const where: any = { ...dataFilter };
 
     if (accountId) where.accountId = accountId;
-    if (cpsGroup) where.cpsGroup = cpsGroup;
+    // cpsGroup 由 dataFilter 处理
+    if (!dataFilter.cpsGroup && cpsGroup) where.cpsGroup = cpsGroup;
     if (serverId) where.serverId = serverId;
     if (syncBatch) where.syncBatch = syncBatch;
 
@@ -485,13 +549,16 @@ export class CpsService {
   /**
    * 查询登录日志
    */
-  async getLoginLogs(dto: QueryLoginLogsDto) {
+  async getLoginLogs(dto: QueryLoginLogsDto, currentUser?: CurrentUser) {
     const { accountId, cpsGroup, serverId, startTime, endTime, syncBatch, page = 1, pageSize = 20 } = dto;
 
-    const where: any = {};
+    // 应用数据隔离过滤
+    const dataFilter = this.buildCpsGroupFilter(currentUser, { cpsGroup });
+    const where: any = { ...dataFilter };
 
     if (accountId) where.accountId = accountId;
-    if (cpsGroup) where.cpsGroup = cpsGroup;
+    // cpsGroup 由 dataFilter 处理
+    if (!dataFilter.cpsGroup && cpsGroup) where.cpsGroup = cpsGroup;
     if (serverId) where.serverId = serverId;
     if (syncBatch) where.syncBatch = syncBatch;
 
@@ -522,12 +589,15 @@ export class CpsService {
   /**
    * 充值汇总统计
    */
-  async getRechargeSummary(dto: RechargeSummaryDto) {
+  async getRechargeSummary(dto: RechargeSummaryDto, currentUser?: CurrentUser) {
     const { cpsGroup, startTime, endTime } = dto;
 
-    const where: any = {};
+    // 应用数据隔离过滤
+    const dataFilter = this.buildCpsGroupFilter(currentUser, { cpsGroup });
+    const where: any = { ...dataFilter };
 
-    if (cpsGroup) where.cpsGroup = cpsGroup;
+    // cpsGroup 由 dataFilter 处理
+    if (!dataFilter.cpsGroup && cpsGroup) where.cpsGroup = cpsGroup;
 
     if (startTime || endTime) {
       where.eventTime = {};

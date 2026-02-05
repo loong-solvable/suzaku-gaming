@@ -30,6 +30,11 @@ service.interceptors.request.use(
 // 响应拦截器
 service.interceptors.response.use(
   (response: AxiosResponse) => {
+    // Blob 响应直接返回（用于文件下载）
+    if (response.config.responseType === 'blob') {
+      return response;
+    }
+
     const res = response.data;
 
     // 后端统一响应格式: { code, message, data, timestamp }
@@ -60,6 +65,16 @@ service.interceptors.response.use(
     }
 
     const status = error.response.status;
+
+    // 401 时自动跳转登录
+    if (status === 401) {
+      localStorage.removeItem('token');
+      const currentPath = window.location.pathname;
+      if (currentPath !== '/login') {
+        window.location.href = `/login?redirect=${encodeURIComponent(currentPath)}`;
+      }
+    }
+
     const errorMap: Record<number, string> = {
       400: '请求参数错误',
       401: '登录已过期，请重新登录',
@@ -109,6 +124,23 @@ export const request = {
 
   delete<T = unknown>(url: string, config?: AxiosRequestConfig): Promise<T> {
     return service.delete(url, config) as Promise<T>;
+  },
+
+  // 文件下载
+  download(url: string, filename?: string): Promise<void> {
+    return service.get(url, { responseType: 'blob' }).then((response: any) => {
+      const blob = new Blob([response.data]);
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      link.download = filename ||
+        response.headers['content-disposition']?.split('filename=')[1] ||
+        'download';
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(downloadUrl);
+    });
   }
 };
 

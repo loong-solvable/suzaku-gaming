@@ -11,6 +11,7 @@ import '@/assets/styles/index.scss';
 
 import App from './App.vue';
 import router from './router';
+import { setupRouterGuards } from './router/guards';
 
 // 开发环境启用Mock
 if (import.meta.env.VITE_APP_MOCK === 'true') {
@@ -31,6 +32,9 @@ app.use(ElementPlus, {
   locale: zhCn,
   size: 'default'
 });
+
+// 启用路由守卫
+setupRouterGuards(router);
 
 // 挂载应用
 app.mount('#app');

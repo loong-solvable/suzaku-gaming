@@ -28,11 +28,51 @@ const BINDING_APPLY_EXPORT_COLUMNS = [
   { key: 'reviewTime', header: '审核时间' },
 ];
 
+// 当前用户接口
+interface CurrentUser {
+  id: number;
+  username: string;
+  role: string;
+  level?: number;
+  cpsGroupCode?: string;
+}
+
 @Injectable()
 export class AuditService {
   constructor(private prisma: PrismaService) {}
 
-  async getBindingApplies(query: QueryBindingAppliesDto) {
+  /**
+   * 构建数据隔离过滤条件
+   * Admin: 可查看所有数据
+   * Manager: 只能查看本组数据（按 teamLeader 或 applicant 过滤）
+   * Operator: 只能查看自己创建的数据
+   */
+  private buildDataFilter(currentUser?: CurrentUser): any {
+    if (!currentUser) return {};
+
+    // Admin (level === 0) 无限制
+    if (typeof currentUser.level === 'number' && currentUser.level === 0) {
+      return {};
+    }
+
+    // Manager (level === 1) 按组过滤
+    if (typeof currentUser.level === 'number' && currentUser.level === 1) {
+      // 可以看到组内成员提交的申请
+      return {
+        OR: [
+          { teamLeader: currentUser.username },
+          { applicant: currentUser.username },
+        ],
+      };
+    }
+
+    // Operator (level === 2) 只能看自己的申请
+    return {
+      applicant: currentUser.username,
+    };
+  }
+
+  async getBindingApplies(query: QueryBindingAppliesDto, currentUser?: CurrentUser) {
     const {
       page = 1,
       pageSize = 20,
@@ -48,7 +88,9 @@ export class AuditService {
       sortOrder,
     } = query;
 
-    const where: any = {};
+    // 应用数据隔离过滤
+    const dataFilter = this.buildDataFilter(currentUser);
+    const where: any = { ...dataFilter };
 
     // 支持 project 或 gameProject 参数
     const projectFilter = project || gameProject;
@@ -115,7 +157,7 @@ export class AuditService {
     };
   }
 
-  async getBindingApplyById(id: number) {
+  async getBindingApplyById(id: number, currentUser?: CurrentUser) {
     const apply = await this.prisma.bindingApply.findUnique({
       where: { id },
     });
@@ -124,20 +166,43 @@ export class AuditService {
       throw new NotFoundException('绑定申请不存在');
     }
 
+    // 数据隔离验证
+    if (currentUser) {
+      const level = currentUser.level;
+      // Admin 无限制
+      if (typeof level === 'number' && level === 0) {
+        return apply;
+      }
+      // Manager 可查看本组数据
+      if (typeof level === 'number' && level === 1) {
+        if (apply.teamLeader !== currentUser.username && apply.applicant !== currentUser.username) {
+          throw new NotFoundException('绑定申请不存在');
+        }
+      }
+      // Operator 只能查看自己的申请
+      if (typeof level === 'number' && level === 2) {
+        if (apply.applicant !== currentUser.username) {
+          throw new NotFoundException('绑定申请不存在');
+        }
+      }
+    }
+
     return apply;
   }
 
-  async createBindingApply(dto: CreateBindingApplyDto) {
+  async createBindingApply(dto: CreateBindingApplyDto, currentUser?: CurrentUser) {
     return this.prisma.bindingApply.create({
       data: {
         ...dto,
+        // 服务端强制设置 applicant 为当前用户，忽略客户端传入值
+        applicant: currentUser?.username || dto.applicant,
         attachments: dto.attachments || [],
         status: 'pending',
       },
     });
   }
 
-  async updateBindingApply(id: number, dto: Partial<CreateBindingApplyDto>) {
+  async updateBindingApply(id: number, dto: Partial<CreateBindingApplyDto>, currentUser?: CurrentUser) {
     const apply = await this.prisma.bindingApply.findUnique({
       where: { id },
     });
@@ -148,6 +213,17 @@ export class AuditService {
 
     if (apply.status !== 'pending') {
       throw new BadRequestException('只能修改待审核的申请');
+    }
+
+    // 数据隔离验证（仅 admin/manager 可调用此方法）
+    if (currentUser) {
+      const level = currentUser.level;
+      // Manager 只能修改自己组内的申请
+      if (typeof level === 'number' && level === 1) {
+        if (apply.teamLeader !== currentUser.username && apply.applicant !== currentUser.username) {
+          throw new NotFoundException('绑定申请不存在');
+        }
+      }
     }
 
     return this.prisma.bindingApply.update({
@@ -226,7 +302,7 @@ export class AuditService {
   /**
    * 导出绑定申请列表为 CSV
    */
-  async exportBindingApplies(query: QueryBindingAppliesDto): Promise<string> {
+  async exportBindingApplies(query: QueryBindingAppliesDto, currentUser?: CurrentUser): Promise<string> {
     const {
       project,
       gameProject,
@@ -238,7 +314,9 @@ export class AuditService {
       applyTimeEnd,
     } = query;
 
-    const where: any = {};
+    // 应用数据隔离过滤
+    const dataFilter = this.buildDataFilter(currentUser);
+    const where: any = { ...dataFilter };
 
     const projectFilter = project || gameProject;
     if (projectFilter) {

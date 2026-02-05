@@ -1,163 +1,147 @@
-# Suzaku Gaming Admin
+# Suzaku Gaming 游戏运营管理系统
 
-游戏数据管理后台系统，包含前端 Vue3 + Element Plus 应用和后端 NestJS + Prisma 服务。
+游戏运营后台管理系统，用于管理玩家数据、订单、渠道推广（CPS）、审计等业务。
 
 ## 技术栈
 
-### 前端
+### 前端 (suzaku-gaming-admin)
 - Vue 3 + TypeScript
-- Element Plus 组件库
-- Pinia 状态管理
-- Vue Router 路由
-- Axios HTTP 客户端
-- SCSS 样式
+- Vite
+- Element Plus
+- Pinia
+- Vue Router
 
-### 后端
-- NestJS (Node.js)
+### 后端 (suzaku-gaming-server)
+- NestJS
 - Prisma ORM
-- PostgreSQL 数据库
-- Redis 缓存
+- PostgreSQL
 - JWT 认证
-- Swagger API 文档
+- ThinkingData 数据同步
 
 ## 项目结构
 
 ```
+suzaku-cursor/
 ├── suzaku-gaming-admin/     # 前端项目
 │   ├── src/
-│   │   ├── api/            # API 接口
-│   │   ├── components/     # 通用组件
-│   │   ├── composables/    # 组合式函数
-│   │   ├── layouts/        # 布局组件
-│   │   ├── mock/           # Mock 数据
-│   │   ├── router/         # 路由配置
-│   │   ├── stores/         # Pinia Store
-│   │   ├── utils/          # 工具函数
-│   │   └── views/          # 页面组件
-│   └── ...
+│   │   ├── api/             # API 接口
+│   │   ├── components/      # 公共组件
+│   │   ├── composables/     # 组合式函数
+│   │   ├── layouts/         # 布局组件
+│   │   ├── router/          # 路由配置
+│   │   ├── stores/          # Pinia 状态管理
+│   │   ├── views/           # 页面组件
+│   │   └── utils/           # 工具函数
+│   └── e2e/                 # E2E 测试
+│
 ├── suzaku-gaming-server/    # 后端项目
 │   ├── src/
-│   │   ├── common/         # 通用模块
-│   │   ├── modules/        # 业务模块
-│   │   └── shared/         # 共享模块
-│   ├── prisma/             # Prisma Schema
-│   └── scripts/            # ETL 脚本
-├── docker-compose.yml       # Docker 编排
-└── ...
+│   │   ├── modules/         # 业务模块
+│   │   │   ├── auth/        # 认证模块
+│   │   │   ├── player/      # 玩家数据模块
+│   │   │   ├── cps/         # CPS 渠道模块
+│   │   │   ├── audit/       # 审计模块
+│   │   │   ├── dashboard/   # 数据概览模块
+│   │   │   ├── thinkingdata/# 数数平台同步模块
+│   │   │   └── user/        # 用户管理模块
+│   │   ├── common/          # 公共模块（守卫、拦截器、装饰器）
+│   │   └── shared/          # 共享模块（Prisma）
+│   ├── prisma/              # 数据库 Schema
+│   └── scripts/             # 脚本工具
+│
+└── docker-compose.yml       # Docker 编排
 ```
-
-## 快速开始
-
-### 开发环境
-
-#### 前端
-
-```bash
-cd suzaku-gaming-admin
-pnpm install
-pnpm dev
-```
-
-访问 http://localhost:5173
-
-#### 后端
-
-```bash
-cd suzaku-gaming-server
-pnpm install
-npx prisma generate
-npx prisma migrate dev
-pnpm prisma:seed  # 初始化数据
-pnpm start:dev
-```
-
-访问 http://localhost:3000/api/docs (Swagger)
-
-### Docker 部署
-
-```bash
-# 复制环境配置
-cp .env.example .env
-# 编辑 .env 配置必要参数
-
-# 启动所有服务
-docker-compose up -d
-
-# 查看日志
-docker-compose logs -f
-
-# 停止服务
-docker-compose down
-```
-
-服务端口:
-- 前端: http://localhost:80
-- 后端 API: http://localhost:3000
-- PostgreSQL: localhost:5432
-- Redis: localhost:6379
 
 ## 功能模块
 
-### 已实现
-- [x] 用户登录/注销
-- [x] Dashboard 统计面板
-- [x] 角色管理 (列表/筛选/分页)
-- [x] 订单管理 (列表/筛选/分页)
-- [x] 绑定审核 (CRUD/审核流程)
-- [x] ThinkingData 数据同步
-- [x] CSV 数据导入 (ETL)
+| 模块 | 说明 |
+|------|------|
+| Dashboard | 数据概览，展示关键指标统计 |
+| 玩家数据 | 角色列表、订单列表查询与导出 |
+| CPS 管理 | 渠道绑定、充值日志、登录日志 |
+| 审计管理 | 绑定申请审批流程 |
+| 用户管理 | 后台用户 CRUD、权限控制 |
+| 数据同步 | 从 ThinkingData 平台定时同步数据 |
 
-### API 接口
+## 快速开始
 
-| 模块 | 接口 | 描述 |
-|------|------|------|
-| Auth | POST /api/auth/login | 用户登录 |
-| Auth | GET /api/auth/profile | 获取用户信息 |
-| Dashboard | GET /api/dashboard/statistics | 获取统计数据 |
-| Player | GET /api/player/roles | 获取角色列表 |
-| Player | GET /api/player/orders | 获取订单列表 |
-| Audit | GET /api/audit/binding-applies | 获取绑定申请列表 |
-| Audit | POST /api/audit/binding-applies | 创建绑定申请 |
-| Audit | POST /api/audit/binding-applies/:id/review | 审核绑定申请 |
-| Sync | POST /api/sync/thinkingdata/trigger | 手动触发数据同步 |
-| Sync | GET /api/sync/thinkingdata/status | 获取同步状态 |
+### 环境要求
 
-## 数据库迁移
+- Node.js >= 18
+- PostgreSQL >= 14
+- pnpm
+
+### 安装依赖
+
+```bash
+# 后端
+cd suzaku-gaming-server
+pnpm install
+
+# 前端
+cd suzaku-gaming-admin
+pnpm install
+```
+
+### 配置环境变量
+
+```bash
+# 后端
+cp suzaku-gaming-server/.env.example suzaku-gaming-server/.env
+# 编辑 .env 配置数据库连接等
+
+# 前端
+cp suzaku-gaming-admin/.env.development suzaku-gaming-admin/.env
+```
+
+### 数据库初始化
 
 ```bash
 cd suzaku-gaming-server
 
-# 创建迁移
-npx prisma migrate dev --name <migration_name>
+# 生成 Prisma Client
+npx prisma generate
 
-# 应用迁移
-npx prisma migrate deploy
+# 执行数据库迁移
+npx prisma db push
 
-# 重置数据库
-pnpm db:reset
+# 初始化种子数据
+npx prisma db seed
 ```
 
-## 环境变量
+### 启动开发服务
 
-### 后端 (.env)
+```bash
+# 后端 (端口 3000)
+cd suzaku-gaming-server
+pnpm run start:dev
 
-```
-DATABASE_URL=postgresql://user:pass@localhost:5432/suzaku_gaming
-REDIS_URL=redis://localhost:6379
-JWT_SECRET=your-jwt-secret
-JWT_EXPIRES_IN=2h
-TA_API_HOST=https://api.thinkingdata.cn
-TA_PROJECT_TOKEN=your-token
-TA_SYNC_ENABLED=true
-TA_SYNC_CRON=0 0 2 * * *
+# 前端 (端口 5173)
+cd suzaku-gaming-admin
+pnpm run dev
 ```
 
-### 前端 (.env.development)
+### 使用 Docker
 
+```bash
+# 开发环境
+docker-compose -f docker-compose.dev.yml up -d
+
+# 生产环境
+docker-compose up -d
 ```
-VITE_APP_TITLE=Suzaku Gaming Admin
-VITE_APP_BASE_API=/api
-VITE_APP_MOCK=true
+
+## 数据同步
+
+系统通过 ThinkingData 平台同步游戏数据：
+
+- **定时同步**：每 30 分钟自动同步最近 2 天的数据
+- **手动同步**：通过 API 或脚本触发全量/增量同步
+
+```bash
+# 同步近一周数据
+cd suzaku-gaming-server
+npx ts-node scripts/sync-week.ts
 ```
 
 ## 默认账号
@@ -165,8 +149,11 @@ VITE_APP_MOCK=true
 | 用户名 | 密码 | 角色 |
 |--------|------|------|
 | admin | admin123 | 管理员 |
-| operator | operator123 | 运营 |
+
+## API 文档
+
+后端启动后访问：http://localhost:3000/api
 
 ## License
 
-Private - All Rights Reserved
+MIT

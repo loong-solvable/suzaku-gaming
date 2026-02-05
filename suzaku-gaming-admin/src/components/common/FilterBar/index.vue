@@ -94,6 +94,7 @@ const handleExport = () => {
           start-placeholder="开始日期"
           end-placeholder="结束日期"
           :style="{ width: field.width || '320px' }"
+          unlink-panels
           @update:model-value="handleFieldChange(field.key, $event)"
         />
       </el-form-item>

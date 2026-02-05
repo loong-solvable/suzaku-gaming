@@ -23,7 +23,7 @@ const generateRoles = (count: number) => {
     const registerTime = Random.datetime('yyyy-MM-ddTHH:mm:ss.SSSZ');
     roles.push({
       id: i + 1,
-      project: '朱雀',
+      project: '海战',
       roleId,
       ucid: `UC${Random.integer(100000, 999999)}`,
       roleName: Random.cname(),
@@ -120,7 +120,7 @@ const generateOrders = (count: number) => {
     const payAmountUsd = Random.pick([0.99, 1.99, 4.99, 9.99, 14.99, 29.99, 49.99, 99.99]);
     orders.push({
       id: i + 1,
-      project: '朱雀',
+      project: '海战',
       orderId: `31_900031000${Random.integer(1000, 9999)}_${Random.datetime('yyyyMMddHHmmss')}_${Random.integer(1, 100)}`,
       roleId: `900031000${Random.integer(1000, 9999)}`,
       roleName: Random.cname(),

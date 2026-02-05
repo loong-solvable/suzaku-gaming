@@ -9,6 +9,9 @@ interface JwtPayload {
   sub: number;
   username: string;
   role: string;
+  level?: number;
+  parentId?: number;
+  cpsGroupCode?: string;
 }
 
 @Injectable()
@@ -32,6 +35,9 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         username: true,
         realName: true,
         role: true,
+        level: true,           // 权限层级
+        parentId: true,        // 上级ID
+        cpsGroupCode: true,    // CPS 分组编码
         status: true,
       },
     });

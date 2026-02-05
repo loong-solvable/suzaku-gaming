@@ -342,7 +342,7 @@ export class CpsSyncService {
    * 执行 ThinkingData SQL 查询
    */
   private async executeQuery(sql: string): Promise<TAQueryResponse> {
-    const url = `${this.apiHost}/open/v1/query_sql`;
+    const url = `${this.apiHost}/querySql`;
 
     const params = new URLSearchParams({
       token: this.projectToken,

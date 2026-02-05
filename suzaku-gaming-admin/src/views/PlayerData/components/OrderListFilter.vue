@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { reactive } from "vue";
+import { reactive, watch } from "vue";
 
 interface FilterValues {
   gameProject: string;
@@ -7,12 +7,16 @@ interface FilterValues {
   channel1: string;
   channel2: string;
   channel3: string;
-  orderType: string;
+  payChannel: string;
   system: string;
   timezone: string;
   roleId: string;
   roleName: string;
-  payTime: Date[];
+  payTime: string[];
+}
+
+interface Props {
+  defaultDateRange?: { min: string | null; max: string | null };
 }
 
 interface Emits {
@@ -21,6 +25,7 @@ interface Emits {
   (e: "export"): void;
 }
 
+const props = defineProps<Props>();
 const emit = defineEmits<Emits>();
 
 const filterValues = reactive<FilterValues>({
@@ -29,7 +34,7 @@ const filterValues = reactive<FilterValues>({
   channel1: "",
   channel2: "",
   channel3: "",
-  orderType: "",
+  payChannel: "",
   system: "",
   timezone: "",
   roleId: "",
@@ -37,8 +42,19 @@ const filterValues = reactive<FilterValues>({
   payTime: []
 });
 
+// 监听默认时间范围变化，设置初始值
+watch(
+  () => props.defaultDateRange,
+  (range) => {
+    if (range && range.min && range.max && filterValues.payTime.length === 0) {
+      filterValues.payTime = [range.min, range.max];
+    }
+  },
+  { immediate: true }
+);
+
 const gameProjectOptions = [
-  { label: "朱雀", value: "suzaku" }
+  { label: "海战", value: "warship" }
 ];
 
 const serverOptions = [
@@ -59,8 +75,10 @@ const serverOptions = [
 // 渠道选项（目前数据中暂无渠道信息，保留空选项）
 const channelOptions: Array<{ label: string; value: string }> = [];
 
-const orderTypeOptions = [
-  { label: "现金充值", value: "cash" }
+const payChannelOptions = [
+  { label: "谷歌支付", value: "谷歌支付" },
+  { label: "苹果支付", value: "苹果支付" },
+  { label: "平台支付", value: "平台支付" }
 ];
 
 const systemOptions = [
@@ -81,18 +99,20 @@ const handleSearch = () => {
 };
 
 const handleReset = () => {
+  // 恢复默认时间范围
+  const defaultRange = props.defaultDateRange;
   Object.assign(filterValues, {
     gameProject: "",
     server: "",
     channel1: "",
     channel2: "",
     channel3: "",
-    orderType: "",
+    payChannel: "",
     system: "",
     timezone: "",
     roleId: "",
     roleName: "",
-    payTime: []
+    payTime: defaultRange?.min && defaultRange?.max ? [defaultRange.min, defaultRange.max] : []
   });
   emit("reset");
 };
@@ -139,9 +159,9 @@ const handleExport = () => {
 
     <div class="filter-row">
       <div class="filter-item">
-        <label class="filter-label">订单类型：</label>
-        <el-select v-model="filterValues.orderType" size="small" clearable>
-          <el-option v-for="opt in orderTypeOptions" :key="opt.value" :label="opt.label" :value="opt.value" />
+        <label class="filter-label">充值渠道：</label>
+        <el-select v-model="filterValues.payChannel" size="small" clearable>
+          <el-option v-for="opt in payChannelOptions" :key="opt.value" :label="opt.label" :value="opt.value" />
         </el-select>
       </div>
       <div class="filter-item">
@@ -177,6 +197,7 @@ const handleExport = () => {
           start-placeholder="开始日期"
           end-placeholder="结束日期"
           value-format="YYYY-MM-DD"
+          unlink-panels
         />
       </div>
       <div class="filter-buttons">

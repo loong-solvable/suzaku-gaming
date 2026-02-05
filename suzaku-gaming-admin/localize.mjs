@@ -9,8 +9,8 @@ const replacements = {
     ['"Audit"', '"审核管理"'],
     ['"Binding Apply"', '"绑定申请"'],
     ['"New Attribution"', '"新增归因更改"'],
-    ['Suzaku Gaming', '朱雀游戏后台'],
-    ['>SG<', '>朱雀<'],
+    ['Suzaku Gaming', '海战游戏后台'],
+    ['>SG<', '>海战<'],
   ],
   'src/components/layout/Header/index.vue': [
     ['Profile', '个人中心'],
@@ -24,11 +24,11 @@ const replacements = {
     ['"Audit"', '"审核管理"'],
     ['"Binding Apply"', '"绑定申请"'],
     ['"New Attribution"', '"新增归因更改"'],
-    ['Suzaku Gaming Admin', '朱雀游戏后台'],
+    ['Suzaku Gaming Admin', '海战游戏后台'],
   ],
   'index.html': [
     ['lang="en"', 'lang="zh-CN"'],
-    ['<title>Vite + Vue + TS</title>', '<title>朱雀游戏后台</title>'],
+    ['<title>Vite + Vue + TS</title>', '<title>海战游戏后台</title>'],
   ],
   'src/views/Dashboard/index.vue': [
     ['"New Players"', '"新增玩家"'],

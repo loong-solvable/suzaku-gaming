@@ -1,8 +1,12 @@
 <script setup lang="ts">
 import { ref, onMounted } from "vue";
 import { ElMessage } from "element-plus";
+import { request } from "@/utils/request";
 import RoleListFilter from "./components/RoleListFilter.vue";
 import type { PaginationConfig } from "@/types/components";
+
+// 默认时间范围
+const defaultDateRange = ref<{ min: string | null; max: string | null }>({ min: null, max: null });
 
 // 表格列配置 - 按目标顺序
 const tableColumns = [
@@ -67,18 +71,12 @@ const fetchData = async () => {
       params.append('sortOrder', sortInfo.value.order === 'ascending' ? 'asc' : 'desc');
     }
 
-    const url = "/api/player/roles?" + params.toString();
-    console.log("Fetching URL:", url);
-    
-    const res = await fetch(url);
-    const json = await res.json();
-    console.log("API response:", json);
-    
-    if (json.code === 0) {
-      tableData.value = json.data.list || [];
-      pagination.value.total = json.data.pagination?.total || 0;
-      console.log("Data updated, total:", pagination.value.total);
-    }
+    // 使用 request 工具（自动带 token）
+    const data = await request.get<{ list: Record<string, unknown>[]; pagination: { total: number } }>(
+      "/player/roles?" + params.toString()
+    );
+    tableData.value = data.list || [];
+    pagination.value.total = data.pagination?.total || 0;
   } catch (error) {
     console.error("Fetch error:", error);
     ElMessage.error("加载数据失败");
@@ -128,13 +126,38 @@ const formatAmount = (val: unknown) => {
   return val || '-';
 };
 
+// 格式化角色名（空名称显示为"新玩家+ID后4位"）
+const formatRoleName = (row: Record<string, unknown>) => {
+  const roleName = row.roleName as string | null;
+  if (roleName && roleName.trim()) {
+    return roleName;
+  }
+  // 空名称的角色，显示为"新玩家+角色ID后4位"
+  const roleId = String(row.roleId || '');
+  return `新玩家${roleId.slice(-4)}`;
+};
+
 // 格式化时间
 const formatTime = (val: unknown) => {
   if (!val) return '-';
   return String(val).replace('T', ' ').slice(0, 19);
 };
 
-onMounted(() => {
+// 加载时间范围
+const loadDateRange = async () => {
+  try {
+    const data = await request.get<{
+      roleRegisterTime: { min: string | null; max: string | null };
+      orderPayTime: { min: string | null; max: string | null };
+    }>('/player/date-range');
+    defaultDateRange.value = data.roleRegisterTime;
+  } catch (error) {
+    console.error('加载时间范围失败:', error);
+  }
+};
+
+onMounted(async () => {
+  await loadDateRange();
   fetchData();
 });
 </script>
@@ -143,6 +166,7 @@ onMounted(() => {
   <div class="role-list-page">
     <!-- 筛选区域 -->
     <RoleListFilter
+      :default-date-range="defaultDateRange"
       @search="handleSearch"
       @reset="handleReset"
       @export="handleExport"
@@ -174,6 +198,9 @@ onMounted(() => {
           <template #default="{ row }">
             <template v-if="col.prop === 'totalRechargeUsd'">
               {{ formatAmount(row[col.prop]) }}
+            </template>
+            <template v-else-if="col.prop === 'roleName'">
+              <span :class="{ 'new-player': !row.roleName }">{{ formatRoleName(row) }}</span>
             </template>
             <template v-else-if="col.prop.includes('Time')">
               {{ formatTime(row[col.prop]) }}
@@ -240,5 +267,10 @@ onMounted(() => {
   .el-pagination__jump {
     font-size: 12px;
   }
+}
+
+.new-player {
+  color: #909399;
+  font-style: italic;
 }
 </style>

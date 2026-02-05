@@ -29,7 +29,7 @@ const filterValues = reactive<FilterValues>({
 });
 
 const gameProjectOptions = [
-  { label: "朱雀", value: "suzaku" },
+  { label: "海战", value: "warship" },
   { label: "JUR", value: "JUR" }
 ];
 
@@ -121,6 +121,7 @@ const handleApply = () => {
           start-placeholder="开始日期"
           end-placeholder="结束日期"
           value-format="YYYY-MM-DD"
+          unlink-panels
         />
       </div>
       <div class="filter-buttons">

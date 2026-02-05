@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from "vue";
 import { ElMessage } from "element-plus";
+import { request } from "@/utils/request";
 import StatCard from "@/components/common/StatCard/index.vue";
 
 interface DashboardData {
@@ -67,13 +68,9 @@ const getValue = (key: string): number => {
 const fetchDashboardData = async () => {
   loading.value = true;
   try {
-    const res = await fetch("/api/dashboard/statistics");
-    const json = await res.json();
-    if (json.code === 0) {
-      dashboardData.value = json.data;
-    } else {
-      ElMessage.error("加载数据失败");
-    }
+    // 使用 request 工具（自动带 token）
+    const data = await request.get<DashboardData>("/dashboard/statistics");
+    dashboardData.value = data;
   } catch (error) {
     console.error("Dashboard API error:", error);
     ElMessage.error("加载数据失败");

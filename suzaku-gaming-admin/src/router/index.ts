@@ -3,6 +3,20 @@ import type { RouteRecordRaw } from "vue-router";
 import MainLayout from "@/layouts/MainLayout.vue";
 
 const routes: RouteRecordRaw[] = [
+  // 登录页（布局外）
+  {
+    path: "/login",
+    name: "Login",
+    component: () => import("@/views/Login/index.vue"),
+    meta: { title: "登录" }
+  },
+  // 403 页面
+  {
+    path: "/403",
+    name: "Forbidden",
+    component: () => import("@/views/Error/403.vue"),
+    meta: { title: "无权限" }
+  },
   {
     path: "/",
     component: MainLayout,
@@ -75,8 +89,38 @@ const routes: RouteRecordRaw[] = [
             }
           }
         ]
+      },
+      // 系统管理（仅 admin/manager 可见）
+      {
+        path: "system",
+        name: "System",
+        redirect: "/system/users",
+        meta: {
+          title: "系统管理",
+          icon: "Setting",
+          roles: ["admin", "manager"]
+        },
+        children: [
+          {
+            path: "users",
+            name: "UserManagement",
+            component: () => import("@/views/System/UserManagement.vue"),
+            meta: {
+              title: "用户管理",
+              breadcrumb: ["系统管理", "用户管理"],
+              roles: ["admin", "manager"]
+            }
+          }
+        ]
       }
     ]
+  },
+  // 404
+  {
+    path: "/:pathMatch(.*)*",
+    name: "NotFound",
+    component: () => import("@/views/Error/404.vue"),
+    meta: { title: "页面不存在" }
   }
 ];
 
@@ -87,7 +131,7 @@ const router = createRouter({
 
 router.beforeEach((to, _from, next) => {
   const title = to.meta.title as string;
-  document.title = title ? title + " - 朱雀游戏后台" : "朱雀游戏后台";
+  document.title = title ? title + " - 海战游戏后台" : "海战游戏后台";
   next();
 });
 

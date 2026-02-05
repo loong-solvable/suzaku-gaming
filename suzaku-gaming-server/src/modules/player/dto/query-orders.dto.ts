@@ -50,6 +50,11 @@ export class QueryOrdersDto {
   @IsString()
   orderType?: string;
 
+  @ApiPropertyOptional({ description: '充值渠道: 谷歌支付/苹果支付/平台支付' })
+  @IsOptional()
+  @IsString()
+  payChannel?: string;
+
   @ApiPropertyOptional({ description: '渠道ID' })
   @IsOptional()
   @Type(() => Number)

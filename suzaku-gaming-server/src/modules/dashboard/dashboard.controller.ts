@@ -1,16 +1,17 @@
 // src/modules/dashboard/dashboard.controller.ts
 import { Controller, Get } from '@nestjs/common';
-import { ApiTags, ApiOperation } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { DashboardService } from './dashboard.service';
-import { Public } from '../../common/decorators/public.decorator';
+import { Roles } from '../../common/decorators/roles.decorator';
 
 @ApiTags('Dashboard')
+@ApiBearerAuth()
 @Controller('dashboard')
 export class DashboardController {
   constructor(private dashboardService: DashboardService) {}
 
   @Get('statistics')
-  @Public()
+  @Roles('admin', 'manager', 'operator')
   @ApiOperation({ summary: '获取 Dashboard 统计数据' })
   async getStatistics() {
     return this.dashboardService.getStatistics();

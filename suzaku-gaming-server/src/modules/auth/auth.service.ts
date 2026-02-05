@@ -36,11 +36,14 @@ export class AuthService {
       throw new UnauthorizedException('用户名或密码错误');
     }
 
-    // 生成 JWT
+    // 生成 JWT（扩展载荷）
     const payload = {
       sub: user.id,
       username: user.username,
       role: user.role,
+      level: user.level,              // 权限层级
+      parentId: user.parentId,        // 上级ID
+      cpsGroupCode: user.cpsGroupCode, // CPS 分组编码
     };
     const token = this.jwtService.sign(payload);
 
@@ -72,6 +75,8 @@ export class AuthService {
         username: user.username,
         realName: user.realName,
         role: user.role,
+        level: user.level,              // 权限层级
+        cpsGroupCode: user.cpsGroupCode, // CPS 分组编码
         avatar: user.avatar,
       },
     };
@@ -85,6 +90,9 @@ export class AuthService {
         username: true,
         realName: true,
         role: true,
+        level: true,              // 权限层级
+        parentId: true,           // 上级ID
+        cpsGroupCode: true,       // CPS 分组编码
         avatar: true,
         lastLoginAt: true,
         lastLoginIp: true,

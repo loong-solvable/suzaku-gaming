@@ -159,7 +159,7 @@ export class PlayerService {
     return {
       list: list.map((role) => ({
         ...role,
-        project: '朱雀',  // 默认项目名称
+        project: '海战',  // 默认项目名称
         ucid: role.accountId || role.roleId,  // UCID 字段
         totalRechargeUsd: Number(role.totalRechargeUsd),
         lastUpdateTime: role.updatedAt,
@@ -186,6 +186,7 @@ export class PlayerService {
       serverId,
       system,
       orderType,
+      payChannel,
       channelId,
       payTimeStart,
       payTimeEnd,
@@ -225,6 +226,9 @@ export class PlayerService {
     }
     if (orderType) {
       where.rechargeType = orderType;
+    }
+    if (payChannel) {
+      where.payChannel = payChannel;
     }
     if (channelId) {
       where.channelId = channelId;
@@ -273,6 +277,12 @@ export class PlayerService {
           country: true,
           deviceType: true,
           isSandbox: true,
+          // 关联获取角色的最后登录时间
+          role: {
+            select: {
+              lastLoginTime: true,
+            },
+          },
         },
       }),
       this.prisma.order.count({ where }),
@@ -289,6 +299,7 @@ export class PlayerService {
         ...order,
         amount: Number(order.payAmountUsd),
         currency: 'USD',
+        lastLoginTime: order.role?.lastLoginTime,
       })),
       pagination: {
         page,
@@ -643,7 +654,7 @@ export class PlayerService {
       return {
         // 游戏项目（目前只有一个）
         gameProjects: [
-          { label: '朱雀', value: 'suzaku' },
+          { label: '海战', value: 'warship' },
         ],
         // 服务器列表
         servers: serverOptions,
@@ -697,5 +708,40 @@ export class PlayerService {
       alipay: '支付宝',
     };
     return map[channel || ''] || `渠道${channel}`;
+  }
+
+  /**
+   * 获取数据时间范围
+   * 返回角色注册时间和订单充值时间的最早/最晚日期
+   */
+  async getDateRange() {
+    // 获取角色注册时间范围
+    const roleRange = await this.prisma.role.aggregate({
+      _min: { registerTime: true },
+      _max: { registerTime: true },
+    });
+
+    // 获取订单充值时间范围
+    const orderRange = await this.prisma.order.aggregate({
+      _min: { payTime: true },
+      _max: { payTime: true },
+    });
+
+    // 格式化日期为 YYYY-MM-DD
+    const formatDate = (date: Date | null): string | null => {
+      if (!date) return null;
+      return date.toISOString().slice(0, 10);
+    };
+
+    return {
+      roleRegisterTime: {
+        min: formatDate(roleRange._min.registerTime),
+        max: formatDate(roleRange._max.registerTime),
+      },
+      orderPayTime: {
+        min: formatDate(orderRange._min.payTime),
+        max: formatDate(orderRange._max.payTime),
+      },
+    };
   }
 }

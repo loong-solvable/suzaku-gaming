@@ -2,14 +2,24 @@
 import { computed } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useAppStore } from "@/stores/app";
+import { useUserStore } from "@/stores/user";
 
 const route = useRoute();
 const router = useRouter();
 const appStore = useAppStore();
+const userStore = useUserStore();
 
 const isCollapsed = computed(() => appStore.sidebarCollapsed);
 
-const menuList = [
+interface MenuItem {
+  path: string;
+  title: string;
+  icon?: string;
+  roles?: string[];
+  children?: MenuItem[];
+}
+
+const allMenuList: MenuItem[] = [
   {
     path: "/dashboard",
     title: "概要面板",
@@ -31,8 +41,26 @@ const menuList = [
     children: [
       { path: "/audit/binding-apply", title: "绑定申请" }
     ]
+  },
+  {
+    path: "/system",
+    title: "系统管理",
+    icon: "Setting",
+    roles: ["admin", "manager"],
+    children: [
+      { path: "/system/users", title: "用户管理" }
+    ]
   }
 ];
+
+// 根据用户角色过滤菜单
+const menuList = computed(() => {
+  const userRole = userStore.role;
+  return allMenuList.filter(item => {
+    if (!item.roles || item.roles.length === 0) return true;
+    return item.roles.includes(userRole);
+  });
+});
 
 const handleMenuSelect = (path: string) => {
   router.push(path);
@@ -44,7 +72,7 @@ const activeMenu = computed(() => route.path);
 <template>
   <div class="sidebar" :class="{ collapsed: isCollapsed }">
     <div class="sidebar-logo">
-      <span v-if="!isCollapsed">Suzaku Gaming</span>
+      <span v-if="!isCollapsed">Warship Gaming</span>
       <span v-else>SG</span>
     </div>
     <el-menu

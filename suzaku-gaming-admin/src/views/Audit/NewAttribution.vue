@@ -1,23 +1,53 @@
 <script setup lang="ts">
-import { ref, reactive, computed, watch } from "vue";
+import { ref, reactive, computed, watch, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { ElMessage } from "element-plus";
 import type { FormInstance, FormRules, UploadProps, UploadFile } from "element-plus";
+import { auditApi } from "@/api/audit";
+import { userApi } from "@/api/user";
+import { uploadApi } from "@/api/upload";
 
 const router = useRouter();
+
+// 用户数据
+interface TeamMember {
+  id: number;
+  username: string;
+  realName: string;
+  parentId?: number;
+}
+const managers = ref<TeamMember[]>([]);
+const operators = ref<TeamMember[]>([]);
+
+// 加载用户数据（使用新的 team-options 接口，operator 也可访问）
+const loadUsers = async () => {
+  try {
+    const res = await userApi.getTeamOptions();
+    managers.value = res.managers || [];
+    operators.value = res.operators || [];
+  } catch (error) {
+    console.error('加载用户数据失败:', error);
+  }
+};
+
+onMounted(() => {
+  loadUsers();
+});
 const formRef = ref<FormInstance>();
 const loading = ref(false);
 
-// 表单数据
+// 表单数据 - 与后端 DTO 字段对应
 const form = reactive({
   project: "",
   roleId: "",
-  server: "",
+  serverId: null as number | null,
+  serverName: "",
   roleName: "",
-  platform1: "",
-  platform2: "",
-  platform3: "",
-  remark: ""
+  platform: "",      // 一级平台 -> platform
+  teamLeader: "",    // 二级组长 -> teamLeader
+  teamMember: "",    // 三级组员 -> teamMember
+  remark: "",
+  attachments: [] as string[]
 });
 
 // 上传的文件列表
@@ -27,7 +57,7 @@ const uploadedCount = computed(() => fileList.value.filter(f => f.status === 'su
 // 下拉选项数据
 const projectOptions = [
   { label: "JUR", value: "jur" },
-  { label: "朱雀", value: "suzaku" },
+  { label: "海战", value: "warship" },
   { label: "战舰", value: "warship" }
 ];
 
@@ -38,83 +68,56 @@ const platform1Options = [
   { label: "Organic", value: "organic" }
 ];
 
-// 二级组长选项（根据一级平台动态变化）
-const platform2Options = computed(() => {
-  const options: Record<string, { label: string; value: string }[]> = {
-    google: [
-      { label: "星禾组", value: "xinghe" },
-      { label: "运营组A", value: "opsA" },
-      { label: "运营组B", value: "opsB" }
-    ],
-    facebook: [
-      { label: "FB组1", value: "fb1" },
-      { label: "FB组2", value: "fb2" }
-    ],
-    tiktok: [
-      { label: "TK组1", value: "tk1" },
-      { label: "TK组2", value: "tk2" }
-    ],
-    organic: [
-      { label: "自然组", value: "natural" }
-    ]
-  };
-  return options[form.platform1] || [];
+// 二级组长选项 - 从用户系统动态获取
+const teamLeaderOptions = computed(() => {
+  // 所有组长都可选（不再按平台过滤）
+  return managers.value.map(m => ({
+    label: m.realName || m.username,
+    value: m.username
+  }));
 });
 
-// 三级组员选项（根据二级组长动态变化）
-const platform3Options = computed(() => {
-  const options: Record<string, { label: string; value: string }[]> = {
-    xinghe: [
-      { label: "星禾组1", value: "xinghe1" },
-      { label: "星禾组2", value: "xinghe2" },
-      { label: "星禾组3", value: "xinghe3" }
-    ],
-    opsA: [
-      { label: "运营A-1", value: "opsA1" },
-      { label: "运营A-2", value: "opsA2" }
-    ],
-    opsB: [
-      { label: "运营B-1", value: "opsB1" },
-      { label: "运营B-2", value: "opsB2" }
-    ],
-    fb1: [
-      { label: "FB1-成员1", value: "fb1m1" },
-      { label: "FB1-成员2", value: "fb1m2" }
-    ],
-    fb2: [
-      { label: "FB2-成员1", value: "fb2m1" }
-    ],
-    tk1: [
-      { label: "TK1-成员1", value: "tk1m1" }
-    ],
-    tk2: [
-      { label: "TK2-成员1", value: "tk2m1" }
-    ],
-    natural: [
-      { label: "自然-1", value: "natural1" }
-    ]
-  };
-  return options[form.platform2] || [];
+// 三级组员选项 - 从用户系统动态获取
+const teamMemberOptions = computed(() => {
+  // 找到选中的组长
+  const selectedManager = managers.value.find(m => m.username === form.teamLeader);
+  if (!selectedManager) return [];
+  
+  // 过滤出该组长下属的组员（根据 parentId 关联）
+  const subordinates = operators.value.filter(o => o.parentId === selectedManager.id);
+  
+  // 如果没有关联的下属，显示所有组员
+  if (subordinates.length === 0) {
+    return operators.value.map(o => ({
+      label: o.realName || o.username,
+      value: o.username
+    }));
+  }
+  
+  return subordinates.map(o => ({
+    label: o.realName || o.username,
+    value: o.username
+  }));
 });
 
 // 监听级联变化，清空下级选择
-watch(() => form.platform1, () => {
-  form.platform2 = "";
-  form.platform3 = "";
+watch(() => form.platform, () => {
+  form.teamLeader = "";
+  form.teamMember = "";
 });
 
-watch(() => form.platform2, () => {
-  form.platform3 = "";
+watch(() => form.teamLeader, () => {
+  form.teamMember = "";
 });
 
 // 表单校验规则
 const rules: FormRules = {
   project: [{ required: true, message: "请选择项目", trigger: "change" }],
   roleId: [{ required: true, message: "请输入角色ID", trigger: "blur" }],
-  server: [{ required: true, message: "请输入区服", trigger: "blur" }],
-  platform1: [{ required: true, message: "请选择一级平台", trigger: "change" }],
-  platform2: [{ required: true, message: "请选择二级组长", trigger: "change" }],
-  platform3: [{ required: true, message: "请选择三级组员", trigger: "change" }]
+  serverId: [{ required: true, message: "请输入区服ID", trigger: "blur" }],
+  platform: [{ required: true, message: "请选择一级平台", trigger: "change" }],
+  teamLeader: [{ required: true, message: "请选择二级组长", trigger: "change" }],
+  teamMember: [{ required: true, message: "请选择三级组员", trigger: "change" }]
 };
 
 // 文件上传前校验
@@ -135,26 +138,44 @@ const beforeUpload: UploadProps['beforeUpload'] = (rawFile) => {
   return true;
 };
 
-// 文件变化处理
-const handleFileChange: UploadProps['onChange'] = (uploadFile, uploadFiles) => {
+// 文件变化处理 - 自动上传
+const handleFileChange: UploadProps['onChange'] = async (uploadFile, uploadFiles) => {
   fileList.value = uploadFiles;
+  
+  // 如果文件有 raw 属性且未上传过，则上传
+  if (uploadFile.raw && uploadFile.status === 'ready') {
+    try {
+      uploadFile.status = 'uploading';
+      const result = await uploadApi.uploadImage(uploadFile.raw);
+      uploadFile.status = 'success';
+      uploadFile.url = result.url;
+      // 更新 attachments 数组
+      form.attachments = fileList.value
+        .filter(f => f.status === 'success' && f.url)
+        .map(f => f.url as string);
+      ElMessage.success('上传成功');
+    } catch (error: any) {
+      uploadFile.status = 'fail';
+      ElMessage.error(error?.message || '上传失败');
+    }
+  }
 };
 
 // 文件移除处理
 const handleFileRemove: UploadProps['onRemove'] = (uploadFile, uploadFiles) => {
   fileList.value = uploadFiles;
+  // 更新 attachments 数组
+  form.attachments = fileList.value
+    .filter(f => f.status === 'success' && f.url)
+    .map(f => f.url as string);
 };
 
 // 提交表单
 const handleSubmit = async () => {
   if (!formRef.value) return;
 
-  // 校验图片数量
+  // 校验图片数量（暂时放宽限制，步骤7会完善文件上传）
   const successCount = fileList.value.filter(f => f.status === 'success' || f.raw).length;
-  if (successCount < 3) {
-    ElMessage.error('请上传至少 3 张截图！');
-    return;
-  }
   if (successCount > 5) {
     ElMessage.error('最多只能上传 5 张截图！');
     return;
@@ -164,13 +185,27 @@ const handleSubmit = async () => {
     await formRef.value.validate();
     loading.value = true;
 
-    // 模拟 API 调用
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    // 构建提交数据
+    const submitData = {
+      project: form.project,
+      roleId: form.roleId,
+      serverId: form.serverId || 0,
+      serverName: form.serverName,
+      roleName: form.roleName,
+      platform: form.platform,
+      teamLeader: form.teamLeader,
+      teamMember: form.teamMember,
+      remark: form.remark,
+      attachments: form.attachments,
+      applicant: '' // 后端会自动覆盖为当前用户
+    };
 
+    await auditApi.createBindingApply(submitData);
     ElMessage.success("提交成功！");
     router.push("/audit/binding-apply");
-  } catch (error) {
-    console.log("Validation failed:", error);
+  } catch (error: any) {
+    console.log("提交失败:", error);
+    ElMessage.error(error?.message || "提交失败");
   } finally {
     loading.value = false;
   }
@@ -209,8 +244,12 @@ const handleCancel = () => {
           <el-input v-model="form.roleId" class="form-input" />
         </el-form-item>
 
-        <el-form-item label="区服" prop="server" required>
-          <el-input v-model="form.server" class="form-input" />
+        <el-form-item label="区服ID" prop="serverId" required>
+          <el-input-number v-model="form.serverId" :min="1" class="form-input" controls-position="right" />
+        </el-form-item>
+
+        <el-form-item label="区服名称" prop="serverName">
+          <el-input v-model="form.serverName" class="form-input" placeholder="可选" />
         </el-form-item>
 
         <el-form-item label="角色昵称" prop="roleName">
@@ -222,8 +261,8 @@ const handleCancel = () => {
           <span class="section-title">来源更改为:</span>
         </div>
 
-        <el-form-item label="一级平台" prop="platform1" required>
-          <el-select v-model="form.platform1" placeholder="请选择" class="form-input">
+        <el-form-item label="一级平台" prop="platform" required>
+          <el-select v-model="form.platform" placeholder="请选择" class="form-input">
             <el-option 
               v-for="opt in platform1Options" 
               :key="opt.value" 
@@ -233,15 +272,15 @@ const handleCancel = () => {
           </el-select>
         </el-form-item>
 
-        <el-form-item label="二级组长" prop="platform2" required>
+        <el-form-item label="二级组长" prop="teamLeader" required>
           <el-select 
-            v-model="form.platform2" 
+            v-model="form.teamLeader" 
             placeholder="请选择" 
             class="form-input"
-            :disabled="!form.platform1"
+            :disabled="!form.platform"
           >
             <el-option 
-              v-for="opt in platform2Options" 
+              v-for="opt in teamLeaderOptions" 
               :key="opt.value" 
               :label="opt.label" 
               :value="opt.value" 
@@ -249,15 +288,15 @@ const handleCancel = () => {
           </el-select>
         </el-form-item>
 
-        <el-form-item label="三级组员" prop="platform3" required>
+        <el-form-item label="三级组员" prop="teamMember" required>
           <el-select 
-            v-model="form.platform3" 
+            v-model="form.teamMember" 
             placeholder="请选择" 
             class="form-input"
-            :disabled="!form.platform2"
+            :disabled="!form.teamLeader"
           >
             <el-option 
-              v-for="opt in platform3Options" 
+              v-for="opt in teamMemberOptions" 
               :key="opt.value" 
               :label="opt.label" 
               :value="opt.value" 
@@ -277,7 +316,7 @@ const handleCancel = () => {
               :before-upload="beforeUpload"
               :on-change="handleFileChange"
               :on-remove="handleFileRemove"
-              accept=".jpg,.jpeg,.png"
+              accept=".jpg,.jpeg,.png,.gif,.webp"
               multiple
               list-type="picture"
             >

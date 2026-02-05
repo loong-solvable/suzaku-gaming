@@ -11,6 +11,9 @@ export interface UserInfo {
   username: string;
   realName: string;
   role: string;
+  level?: number;           // 权限层级
+  parentId?: number;        // 上级ID
+  cpsGroupCode?: string;    // CPS 分组编码
   avatar?: string;
 }
 

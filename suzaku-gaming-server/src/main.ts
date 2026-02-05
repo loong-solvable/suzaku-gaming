@@ -47,7 +47,7 @@ async function bootstrap() {
   if (process.env.NODE_ENV !== 'production') {
     const config = new DocumentBuilder()
       .setTitle('Suzaku Gaming API')
-      .setDescription('朱雀游戏后台管理系统 API 文档')
+      .setDescription('海战游戏后台管理系统 API 文档')
       .setVersion('1.0')
       .addBearerAuth()
       .build();

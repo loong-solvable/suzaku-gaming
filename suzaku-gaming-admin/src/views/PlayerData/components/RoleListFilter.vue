@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { reactive } from "vue";
+import { reactive, watch } from "vue";
 
 interface FilterValues {
   gameProject: string;
@@ -11,7 +11,11 @@ interface FilterValues {
   timezone: string;
   roleId: string;
   roleName: string;
-  registerTime: Date[];
+  registerTime: string[];
+}
+
+interface Props {
+  defaultDateRange?: { min: string | null; max: string | null };
 }
 
 interface Emits {
@@ -20,6 +24,7 @@ interface Emits {
   (e: "export"): void;
 }
 
+const props = defineProps<Props>();
 const emit = defineEmits<Emits>();
 
 const filterValues = reactive<FilterValues>({
@@ -35,8 +40,19 @@ const filterValues = reactive<FilterValues>({
   registerTime: []
 });
 
+// 监听默认时间范围变化，设置初始值
+watch(
+  () => props.defaultDateRange,
+  (range) => {
+    if (range && range.min && range.max && filterValues.registerTime.length === 0) {
+      filterValues.registerTime = [range.min, range.max];
+    }
+  },
+  { immediate: true }
+);
+
 const gameProjectOptions = [
-  { label: "朱雀", value: "suzaku" }
+  { label: "海战", value: "warship" }
 ];
 
 const serverOptions = [
@@ -124,6 +140,8 @@ const handleSearch = () => {
 };
 
 const handleReset = () => {
+  // 恢复默认时间范围
+  const defaultRange = props.defaultDateRange;
   Object.assign(filterValues, {
     gameProject: "",
     server: "",
@@ -134,7 +152,7 @@ const handleReset = () => {
     timezone: "+00:00",
     roleId: "",
     roleName: "",
-    registerTime: []
+    registerTime: defaultRange?.min && defaultRange?.max ? [defaultRange.min, defaultRange.max] : []
   });
   emit("reset");
 };
@@ -213,6 +231,7 @@ const handleExport = () => {
           start-placeholder="开始日期"
           end-placeholder="结束日期"
           value-format="YYYY-MM-DD"
+          unlink-panels
         />
       </div>
       <div class="filter-buttons">

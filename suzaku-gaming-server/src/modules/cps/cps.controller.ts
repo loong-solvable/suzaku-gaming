@@ -71,15 +71,15 @@ export class CpsController {
   @Get('binding/list')
   @ApiOperation({ summary: '查询绑定列表' })
   @Roles('admin', 'manager', 'operator')
-  async getBindings(@Query() dto: QueryBindingsDto) {
-    return this.cpsService.getBindings(dto);
+  async getBindings(@Query() dto: QueryBindingsDto, @Req() req: any) {
+    return this.cpsService.getBindings(dto, req.user);
   }
 
   @Get('binding/fail-logs')
   @ApiOperation({ summary: '查询绑定失败日志' })
   @Roles('admin', 'manager')
-  async getFailLogs(@Query() dto: QueryFailLogsDto) {
-    return this.cpsService.getFailLogs(dto);
+  async getFailLogs(@Query() dto: QueryFailLogsDto, @Req() req: any) {
+    return this.cpsService.getFailLogs(dto, req.user);
   }
 
   // ===== 数据查询 =====
@@ -87,21 +87,21 @@ export class CpsController {
   @Get('recharge/list')
   @ApiOperation({ summary: '查询 CPS 充值日志' })
   @Roles('admin', 'manager', 'operator')
-  async getRechargeLogs(@Query() dto: QueryRechargeLogsDto) {
-    return this.cpsService.getRechargeLogs(dto);
+  async getRechargeLogs(@Query() dto: QueryRechargeLogsDto, @Req() req: any) {
+    return this.cpsService.getRechargeLogs(dto, req.user);
   }
 
   @Get('recharge/summary')
   @ApiOperation({ summary: '查询充值汇总统计' })
   @Roles('admin', 'manager')
-  async getRechargeSummary(@Query() dto: RechargeSummaryDto) {
-    return this.cpsService.getRechargeSummary(dto);
+  async getRechargeSummary(@Query() dto: RechargeSummaryDto, @Req() req: any) {
+    return this.cpsService.getRechargeSummary(dto, req.user);
   }
 
   @Get('login/list')
   @ApiOperation({ summary: '查询 CPS 登录日志' })
   @Roles('admin', 'manager', 'operator')
-  async getLoginLogs(@Query() dto: QueryLoginLogsDto) {
-    return this.cpsService.getLoginLogs(dto);
+  async getLoginLogs(@Query() dto: QueryLoginLogsDto, @Req() req: any) {
+    return this.cpsService.getLoginLogs(dto, req.user);
   }
 }

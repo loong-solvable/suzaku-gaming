@@ -266,6 +266,41 @@ sudo bash deploy.sh deploy
 2. 如果 Docker 安装失败，尝试升级到 CentOS 7
 3. 或者联系运维手动安装 Docker
 
+**Q: 根目录磁盘空间不足怎么办？**
+
+Docker 默认将数据存储在 `/var/lib/docker`，会占用根目录空间。如果根目录空间有限，建议将 Docker 数据目录迁移到其他分区（如 `/data`）：
+
+```bash
+# 1. 停止 Docker
+sudo systemctl stop docker
+
+# 2. 创建新目录并复制数据
+sudo mkdir -p /data/docker
+sudo rsync -aP /var/lib/docker/ /data/docker/
+
+# 3. 修改 Docker 配置
+sudo vi /etc/docker/daemon.json
+# 添加: "data-root": "/data/docker"
+
+# 4. 重启 Docker
+sudo systemctl start docker
+
+# 5. 验证后删除旧数据
+sudo docker info | grep "Docker Root Dir"
+sudo rm -rf /var/lib/docker
+```
+
+**Q: 上传的图片无法显示怎么办？**
+
+确保 Nginx 配置中包含了 `/uploads/` 的代理配置。如果已部署的服务出现此问题，可以手动修复：
+
+```bash
+# 进入前端容器检查配置
+sudo docker exec suzaku-frontend cat /etc/nginx/nginx.conf | grep -A3 "uploads"
+
+# 如果没有 /uploads/ 配置，需要重新部署或手动添加
+```
+
 ### 项目结构（Docker）
 
 ```
@@ -285,8 +320,47 @@ suzaku-cursor/
 
 系统通过 ThinkingData 平台同步游戏数据：
 
-- **定时同步**：每 30 分钟自动同步最近 2 天的数据
-- **手动同步**：通过 API 或脚本触发全量/增量同步
+- **定时同步**：每 30 分钟自动同步最近 2 天的数据（需配置 `TA_SYNC_ENABLED=true`）
+- **手动同步**：通过 API 触发同步
+
+### 配置 ThinkingData
+
+在 `.env.production` 中配置：
+
+```bash
+TA_API_HOST=https://your-thinkingdata-api-host/querySql
+TA_PROJECT_TOKEN=your-project-token
+TA_SYNC_ENABLED=true
+```
+
+配置完成后重启后端服务使配置生效。
+
+### 手动同步数据（Docker 环境）
+
+在 Docker 环境中，通过 API 触发同步：
+
+```bash
+# 1. 获取登录 Token
+TOKEN=$(curl -s -X POST http://localhost:3000/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"username":"admin","password":"admin123"}' | sed -n 's/.*"token":"\([^"]*\)".*/\1/p')
+
+# 2. 同步角色数据
+curl -X POST "http://localhost:3000/api/sync/thinkingdata/sync-roles?limit=100000" \
+  -H "Authorization: Bearer $TOKEN"
+
+# 3. 同步近一周订单
+START_DATE=$(date -d "7 days ago" +%Y-%m-%d)
+END_DATE=$(date +%Y-%m-%d)
+curl -X POST "http://localhost:3000/api/sync/thinkingdata/sync-orders-range?startDate=$START_DATE&endDate=$END_DATE&limit=100000" \
+  -H "Authorization: Bearer $TOKEN"
+
+# 4. 同步最后登录时间
+curl -X POST "http://localhost:3000/api/sync/thinkingdata/sync-last-login-range?startDate=$START_DATE&endDate=$END_DATE" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+### 本地开发环境同步
 
 ```bash
 # 同步近一周数据

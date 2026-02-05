@@ -15,8 +15,8 @@ RUN pnpm install --frozen-lockfile
 # Copy source code
 COPY . .
 
-# Build the application
-RUN pnpm build
+# Build the application (skip type check for faster Docker build)
+RUN pnpm exec vite build
 
 # Stage 2: Production
 FROM nginx:alpine

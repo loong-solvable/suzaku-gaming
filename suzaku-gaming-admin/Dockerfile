@@ -12,6 +12,9 @@ COPY package.json pnpm-lock.yaml ./
 # Install dependencies
 RUN pnpm install --frozen-lockfile
 
+# Install terser (required by Vite for minification)
+RUN pnpm add -D terser
+
 # Copy source code
 COPY . .
 

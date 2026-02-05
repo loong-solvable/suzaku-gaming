@@ -1,6 +1,8 @@
 node_modules
 dist
 .env
+.env.production
+.env.local
 *.log
 .DS_Store
 .vscode
@@ -11,6 +13,10 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
+
+# 上传文件目录
+uploads/
+suzaku-gaming-server/uploads/
 
 # 忽略补全计划文件夹
 补全计划/

@@ -121,7 +121,7 @@ cd suzaku-gaming-admin
 pnpm run dev
 ```
 
-### 使用 Docker
+### 使用 Docker（本地开发）
 
 ```bash
 # 开发环境
@@ -129,6 +129,156 @@ docker-compose -f docker-compose.dev.yml up -d
 
 # 生产环境
 docker-compose up -d
+```
+
+## 服务器部署
+
+### 系统要求
+
+- **操作系统**：CentOS 6.5+ / CentOS 7+ / Ubuntu 18.04+ / Debian 9+
+- **内存**：建议 2GB 以上
+- **硬盘**：建议 20GB 以上
+
+> 📌 部署脚本已针对**低版本 CentOS**（包括 CentOS 6.x）进行优化，会自动选择兼容的安装方式。
+
+### 方式一：一键部署（推荐）
+
+在服务器上执行：
+
+```bash
+# 1. 克隆代码
+git clone https://github.com/your-repo/suzaku-cursor.git
+cd suzaku-cursor
+
+# 2. 配置环境变量（可选，脚本会自动生成随机密码）
+cp .env.production.example .env.production
+vim .env.production  # 修改数据库密码、JWT 密钥等
+
+# 3. 一键部署
+sudo bash quick-start.sh
+```
+
+### 方式二：手动部署
+
+```bash
+# 1. 克隆代码
+git clone https://github.com/your-repo/suzaku-cursor.git
+cd suzaku-cursor
+
+# 2. 安装 Docker（如已安装可跳过）
+sudo bash deploy.sh install
+
+# 3. 配置环境变量
+cp .env.production .env
+vim .env  # 修改数据库密码、JWT 密钥等
+
+# 4. 部署服务
+sudo bash deploy.sh deploy
+```
+
+### 部署脚本命令
+
+```bash
+# 部署服务（首次使用）
+sudo bash deploy.sh deploy
+
+# 启动服务
+sudo bash deploy.sh start
+
+# 停止服务
+sudo bash deploy.sh stop
+
+# 重启服务
+sudo bash deploy.sh restart
+
+# 查看日志
+sudo bash deploy.sh logs
+
+# 查看服务状态
+sudo bash deploy.sh status
+
+# 清理所有数据（危险操作）
+sudo bash deploy.sh cleanup
+```
+
+### 环境变量说明
+
+编辑 `.env.production` 文件：
+
+```bash
+# 数据库配置（务必修改密码）
+POSTGRES_USER=suzaku
+POSTGRES_PASSWORD=your_strong_password_here  # ← 修改为强密码
+POSTGRES_DB=suzaku_gaming
+
+# JWT 配置（务必修改为随机字符串）
+JWT_SECRET=your-super-secret-jwt-key-32chars  # ← 修改为随机字符串
+JWT_EXPIRES_IN=2h
+
+# ThinkingData 配置（可选）
+TA_API_HOST=
+TA_PROJECT_TOKEN=
+TA_SYNC_ENABLED=false
+```
+
+### 部署后访问
+
+部署成功后：
+
+| 服务 | 地址 |
+|------|------|
+| 管理后台 | http://服务器IP |
+| 后端 API | http://服务器IP:3000 |
+| 数据库 | 服务器IP:5432 |
+| Redis | 服务器IP:6379 |
+
+### 常见问题
+
+**Q: 端口被占用怎么办？**
+
+编辑 `docker-compose.yml`，修改端口映射：
+```yaml
+ports:
+  - "8080:80"  # 将 80 改为 8080
+```
+
+**Q: 如何查看服务日志？**
+
+```bash
+# 查看所有服务日志
+sudo bash deploy.sh logs
+
+# 查看特定服务日志
+docker logs -f suzaku-backend
+docker logs -f suzaku-frontend
+```
+
+**Q: 如何更新部署？**
+
+```bash
+git pull origin main
+sudo bash deploy.sh deploy
+```
+
+**Q: CentOS 6 部署失败怎么办？**
+
+1. 确保内核版本 >= 2.6.32-431
+2. 如果 Docker 安装失败，尝试升级到 CentOS 7
+3. 或者联系运维手动安装 Docker
+
+### 项目结构（Docker）
+
+```
+suzaku-cursor/
+├── docker-compose.yml       # Docker 编排配置
+├── .env.production          # 生产环境变量
+├── deploy.sh                # 部署脚本
+├── quick-start.sh           # 快速启动脚本
+├── suzaku-gaming-admin/
+│   ├── Dockerfile           # 前端镜像构建
+│   └── nginx.conf           # Nginx 配置
+└── suzaku-gaming-server/
+    └── Dockerfile           # 后端镜像构建
 ```
 
 ## 数据同步

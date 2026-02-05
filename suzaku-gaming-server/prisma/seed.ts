@@ -13,7 +13,12 @@ async function main() {
 
   const admin = await prisma.adminUser.upsert({
     where: { username: 'admin' },
-    update: { level: 0 },
+    update: { 
+      level: 0,
+      passwordHash,
+      salt,
+      status: 1,
+    },
     create: {
       username: 'admin',
       passwordHash,
@@ -30,7 +35,12 @@ async function main() {
   const operatorHash = await bcrypt.hash('operator123', salt);
   const operator = await prisma.adminUser.upsert({
     where: { username: 'operator' },
-    update: { level: 2 },
+    update: { 
+      level: 2,
+      passwordHash: operatorHash,
+      salt,
+      status: 1,
+    },
     create: {
       username: 'operator',
       passwordHash: operatorHash,
@@ -46,7 +56,12 @@ async function main() {
   const managerHash = await bcrypt.hash('manager123', salt);
   const manager = await prisma.adminUser.upsert({
     where: { username: 'manager' },
-    update: { level: 1 },
+    update: { 
+      level: 1,
+      passwordHash: managerHash,
+      salt,
+      status: 1,
+    },
     create: {
       username: 'manager',
       passwordHash: managerHash,

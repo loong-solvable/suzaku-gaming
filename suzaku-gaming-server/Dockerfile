@@ -27,27 +27,17 @@ RUN pnpm build
 # Stage 2: Production
 FROM node:22-alpine AS runner
 
-# Install pnpm
-RUN corepack enable && corepack prepare pnpm@9 --activate
-
 # Create non-root user
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nestjs
 
 WORKDIR /app
 
-# Copy package files and prisma schema
-COPY package.json pnpm-lock.yaml ./
-COPY prisma ./prisma/
-
-# Install production dependencies only
-RUN pnpm install --frozen-lockfile --prod
-
-# Generate Prisma Client in production stage (use pnpm exec to use installed version)
-RUN pnpm exec prisma generate
-
-# Copy built application
+# Copy built application from builder
 COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/package.json ./
+COPY --from=builder /app/prisma ./prisma
 
 # Change ownership
 RUN chown -R nestjs:nodejs /app

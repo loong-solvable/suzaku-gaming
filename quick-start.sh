@@ -48,7 +48,8 @@ TA_API_HOST=
 TA_PROJECT_TOKEN=
 TA_SYNC_ENABLED=false
 EOF
-    echo "[成功] 已生成 .env.production（使用随机密码）"
+        echo "[成功] 已生成 .env.production（使用随机密码）"
+    fi
 fi
 
 # 创建 .env 软链接

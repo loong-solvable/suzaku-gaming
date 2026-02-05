@@ -24,6 +24,9 @@ COPY . .
 # Build the application
 RUN pnpm build
 
+# Verify build output exists
+RUN ls -la dist/ && test -f dist/main.js
+
 # Stage 2: Production
 FROM node:22-alpine AS runner
 

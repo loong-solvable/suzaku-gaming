@@ -114,9 +114,6 @@
             <el-option label="组员" value="operator" />
           </el-select>
         </el-form-item>
-        <el-form-item label="CPS组">
-          <el-input v-model="formData.cpsGroupCode" placeholder="CPS分组编码" />
-        </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="dialogVisible = false">取消</el-button>
@@ -182,7 +179,6 @@ const formData = reactive({
   password: '',
   realName: '',
   role: 'operator',
-  cpsGroupCode: '',
 });
 
 const formRules = {
@@ -278,7 +274,6 @@ const handleCreate = () => {
   formData.password = '';
   formData.realName = '';
   formData.role = 'operator';
-  formData.cpsGroupCode = '';
   dialogVisible.value = true;
 };
 
@@ -289,7 +284,6 @@ const handleEdit = (row: UserInfo) => {
   formData.password = '';
   formData.realName = row.realName;
   formData.role = row.role;
-  formData.cpsGroupCode = row.cpsGroupCode || '';
   dialogVisible.value = true;
 };
 
@@ -303,7 +297,6 @@ const handleSubmit = async () => {
       await userApi.updateUser(editingId.value, {
         realName: formData.realName,
         role: formData.role,
-        cpsGroupCode: formData.cpsGroupCode || undefined,
       });
       ElMessage.success('更新成功');
     } else {
@@ -312,7 +305,6 @@ const handleSubmit = async () => {
         password: formData.password,
         realName: formData.realName,
         role: formData.role,
-        cpsGroupCode: formData.cpsGroupCode || undefined,
       });
       ElMessage.success('创建成功');
     }

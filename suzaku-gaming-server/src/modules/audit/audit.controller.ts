@@ -17,6 +17,7 @@ import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { AuditService } from './audit.service';
 import { QueryBindingAppliesDto } from './dto/query-binding-applies.dto';
 import { CreateBindingApplyDto } from './dto/create-binding-apply.dto';
+import { UpdateBindingApplyDto } from './dto/update-binding-apply.dto';
 import { ReviewBindingApplyDto } from './dto/review-binding-apply.dto';
 import { Roles } from '../../common/decorators/roles.decorator';
 
@@ -81,7 +82,7 @@ export class AuditController {
   @ApiOperation({ summary: '更新绑定申请' })
   async updateBindingApply(
     @Param('id', ParseIntPipe) id: number,
-    @Body() dto: Partial<CreateBindingApplyDto>,
+    @Body() dto: UpdateBindingApplyDto,
     @Req() req: Request,
   ) {
     return this.auditService.updateBindingApply(id, dto, (req as any).user);
@@ -102,7 +103,14 @@ export class AuditController {
     @Body() dto: ReviewBindingApplyDto,
     @Req() req: Request,
   ) {
-    // 服务端强制设置 reviewerId 为当前用户 ID
-    return this.auditService.reviewBindingApply(id, dto, (req as any).user?.id);
+    // R10: 传完整 currentUser 用于组权限校验
+    return this.auditService.reviewBindingApply(id, dto, (req as any).user);
+  }
+
+  @Get('role-check/:roleId')
+  @Roles('admin', 'manager', 'operator')
+  @ApiOperation({ summary: '角色绑定预校验' })
+  async checkRoleForBinding(@Param('roleId') roleId: string) {
+    return this.auditService.checkRoleForBinding(roleId);
   }
 }

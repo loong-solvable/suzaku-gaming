@@ -9,6 +9,7 @@ export interface UserInfo {
   level?: number;
   parentId?: number;
   cpsGroupCode?: string;
+  memberCode?: string;
   avatar?: string;
   status: number;
   lastLoginAt?: string;
@@ -104,9 +105,12 @@ export const userApi = {
   },
 
   // 获取组长和组员选项（用于归因申请）
+  // R18: 返回同时包含旧 key（managers/operators）和新 key（groups/members）
   getTeamOptions(): Promise<{
-    managers: { id: number; username: string; realName: string }[];
-    operators: { id: number; username: string; realName: string; parentId?: number }[];
+    managers: { id: number; username: string; realName: string; cpsGroupCode?: string }[];
+    operators: { id: number; username: string; realName: string; cpsGroupCode?: string; memberCode?: string; parentId?: number }[];
+    groups: { id: number; username: string; realName: string; cpsGroupCode?: string }[];
+    members: { id: number; username: string; realName: string; cpsGroupCode?: string; memberCode?: string; parentId?: number }[];
   }> {
     return request.get('/user/team-options');
   },

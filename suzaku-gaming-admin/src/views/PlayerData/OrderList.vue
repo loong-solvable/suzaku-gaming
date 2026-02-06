@@ -102,7 +102,7 @@ const fetchData = async () => {
   }
 };
 
-const handleSearch = (values: Record<string, unknown>) => {
+const handleSearch = (values: any) => {
   filterParams.value = values;
   pagination.value.page = 1;
   fetchData();

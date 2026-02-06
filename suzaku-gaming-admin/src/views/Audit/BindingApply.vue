@@ -14,23 +14,25 @@ const tableColumns = [
   { prop: "project", label: "游戏项目", width: 80 },
   { prop: "roleId", label: "角色ID", minWidth: 100 },
   { prop: "serverId", label: "区服", width: 60 },
+  { prop: "platform", label: "组名", width: 80 },
+  { prop: "teamMember", label: "组员编号", width: 90 },
   { prop: "applicant", label: "申请人", minWidth: 90 },
   { prop: "status", label: "状态", width: 90 },
   { prop: "applyTime", label: "申请时间", minWidth: 140 },
   { prop: "actions", label: "操作", width: 180, fixed: "right" }
 ];
 
-const tableData = ref<Record<string, unknown>[]>([]);
+const tableData = ref<any[]>([]);
 const loading = ref(false);
 const pagination = ref<PaginationConfig>({
   page: 1,
   pageSize: 20,
   total: 0
 });
-const filterParams = ref<Record<string, unknown>>({});
+const filterParams = ref<any>({});
 
 const dialogVisible = ref(false);
-const selectedRow = ref<Record<string, unknown> | null>(null);
+const selectedRow = ref<any>(null);
 
 // 审核相关
 const reviewDialogVisible = ref(false);
@@ -72,7 +74,7 @@ const fetchData = async () => {
   }
 };
 
-const handleSearch = (values: Record<string, unknown>) => {
+const handleSearch = (values: any) => {
   filterParams.value = values;
   pagination.value.page = 1;
   fetchData();
@@ -223,6 +225,20 @@ const formatTime = (val: unknown) => {
   return String(val).replace('T', ' ').slice(0, 19);
 };
 
+// Phase 4: 兼容新旧数据格式
+const formatGroupName = (platform: unknown) => {
+  const p = String(platform || '');
+  // 新数据：GroupA → A组
+  if (p.startsWith('Group')) return p.replace('Group', '') + '组';
+  // 旧数据：iOS/Google → 原值展示
+  return p || '-';
+};
+
+const formatMemberCode = (teamMember: unknown) => {
+  const m = String(teamMember || '');
+  return m || '-';
+};
+
 // 获取图片完整URL
 const getImageUrl = (url: string) => {
   if (!url) return '';
@@ -274,6 +290,12 @@ onMounted(() => {
           <template #default="{ row }">
             <template v-if="col.prop.includes('Time')">
               {{ formatTime(row[col.prop]) }}
+            </template>
+            <template v-else-if="col.prop === 'platform'">
+              {{ formatGroupName(row.platform) }}
+            </template>
+            <template v-else-if="col.prop === 'teamMember'">
+              {{ formatMemberCode(row.teamMember) }}
             </template>
             <template v-else>
               {{ row[col.prop] || '-' }}
@@ -329,12 +351,13 @@ onMounted(() => {
     <el-dialog v-model="dialogVisible" title="申请详情" width="600px">
       <div v-if="selectedRow" class="detail-content">
         <p><strong>ID：</strong> {{ selectedRow.id }}</p>
-        <p><strong>游戏项目：</strong> {{ selectedRow.project }}</p>
+        <p><strong>游戏项目：</strong> {{ selectedRow.project === 'warship' ? '海战' : selectedRow.project }}</p>
         <p><strong>角色ID：</strong> {{ selectedRow.roleId }}</p>
         <p><strong>角色名称：</strong> {{ selectedRow.roleName || '-' }}</p>
         <p><strong>区服：</strong> {{ selectedRow.serverId }} - {{ selectedRow.serverName || '' }}</p>
+        <p><strong>组名：</strong> {{ formatGroupName(selectedRow.platform) }}</p>
         <p><strong>组长：</strong> {{ selectedRow.teamLeader || '-' }}</p>
-        <p><strong>组员：</strong> {{ selectedRow.teamMember || '-' }}</p>
+        <p><strong>组员编号：</strong> {{ formatMemberCode(selectedRow.teamMember) }}</p>
         <p><strong>申请人：</strong> {{ selectedRow.applicant }}</p>
         <p><strong>申请时间：</strong> {{ formatTime(selectedRow.applyTime) }}</p>
         <p><strong>状态：</strong> {{ getStatusLabel(selectedRow.status as string) }}</p>

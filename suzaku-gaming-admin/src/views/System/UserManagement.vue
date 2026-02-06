@@ -42,6 +42,11 @@
           </template>
         </el-table-column>
         <el-table-column prop="cpsGroupCode" label="CPS组" width="100" />
+        <el-table-column prop="memberCode" label="组员编号" width="110">
+          <template #default="{ row }">
+            {{ row.memberCode || '-' }}
+          </template>
+        </el-table-column>
         <el-table-column prop="status" label="状态" width="80">
           <template #default="{ row }">
             <el-tag :type="row.status === 1 ? 'success' : 'danger'">

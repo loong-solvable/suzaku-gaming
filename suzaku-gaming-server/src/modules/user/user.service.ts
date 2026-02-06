@@ -4,6 +4,7 @@ import {
   NotFoundException,
   BadRequestException,
   ForbiddenException,
+  ConflictException,
 } from '@nestjs/common';
 import { PrismaService } from '../../shared/prisma/prisma.service';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -72,6 +73,7 @@ export class UserService {
           level: true,
           parentId: true,
           cpsGroupCode: true,
+          memberCode: true,
           avatar: true,
           status: true,
           lastLoginAt: true,
@@ -99,33 +101,43 @@ export class UserService {
 
   /**
    * 获取组长和组员选项（用于归因申请，所有角色可访问）
+   * R18: 同时返回旧 key（managers/operators）和新 key（groups/members）实现向后兼容
    */
-  async getTeamOptions() {
-    const [managers, operators] = await Promise.all([
+  async getTeamOptions(currentUser?: CurrentUser) {
+    // 基础查询条件
+    const groupFilter: any = { role: 'manager', status: 1 };
+    const memberFilter: any = { role: 'operator', status: 1 };
+
+    // 非 admin 仅返回本组数据
+    if (currentUser && currentUser.level !== 0) {
+      if (!currentUser.cpsGroupCode) {
+        // 无组编码的非 admin 用户：返回空集，防止 fail-open 泄露全量数据
+        return { managers: [], operators: [], groups: [], members: [] };
+      }
+      groupFilter.cpsGroupCode = currentUser.cpsGroupCode;
+      memberFilter.cpsGroupCode = currentUser.cpsGroupCode;
+    }
+
+    const [groups, members] = await Promise.all([
       this.prisma.adminUser.findMany({
-        where: { role: 'manager', status: 1 },
-        select: {
-          id: true,
-          username: true,
-          realName: true,
-        },
-        orderBy: { realName: 'asc' },
+        where: groupFilter,
+        select: { id: true, username: true, realName: true, cpsGroupCode: true },
+        orderBy: { cpsGroupCode: 'asc' },
       }),
       this.prisma.adminUser.findMany({
-        where: { role: 'operator', status: 1 },
-        select: {
-          id: true,
-          username: true,
-          realName: true,
-          parentId: true,
-        },
-        orderBy: { realName: 'asc' },
+        where: memberFilter,
+        // R18 兼容：保留 parentId，旧前端 NewAttribution.vue 依赖此字段过滤组员
+        select: { id: true, username: true, realName: true, cpsGroupCode: true, memberCode: true, parentId: true },
+        orderBy: { memberCode: 'asc' },
       }),
     ]);
 
+    // R18 向后兼容：同时返回旧 key 和新 key
     return {
-      managers,
-      operators,
+      managers: groups,     // 旧 key——向后兼容
+      operators: members,   // 旧 key——向后兼容
+      groups,               // 新 key——Phase 4 前端使用
+      members,              // 新 key——Phase 4 前端使用
     };
   }
 
@@ -143,6 +155,7 @@ export class UserService {
         level: true,
         parentId: true,
         cpsGroupCode: true,
+        memberCode: true,
         avatar: true,
         status: true,
         lastLoginAt: true,
@@ -198,6 +211,70 @@ export class UserService {
     const salt = await bcrypt.genSalt(10);
     const passwordHash = await bcrypt.hash(dto.password, salt);
 
+    // R3 + R15: 为 operator 自动生成组员编号（含并发重试）
+    let memberCode: string | null = null;
+    if (dto.role === 'operator' && dto.cpsGroupCode) {
+      const MAX_RETRIES = 3;
+      for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+        try {
+          memberCode = await this.generateMemberCode(dto.cpsGroupCode);
+          // 尝试创建用户（带唯一约束）
+          const user = await this.prisma.adminUser.create({
+            data: {
+              username: dto.username,
+              passwordHash,
+              salt,
+              realName: dto.realName,
+              role: dto.role,
+              level,
+              parentId: dto.parentId,
+              cpsGroupCode: dto.cpsGroupCode,
+              memberCode,
+              avatar: dto.avatar,
+              status: 1,
+            },
+            select: {
+              id: true,
+              username: true,
+              realName: true,
+              role: true,
+              level: true,
+              parentId: true,
+              cpsGroupCode: true,
+              memberCode: true,
+              avatar: true,
+              status: true,
+              createdAt: true,
+            },
+          });
+
+          // 记录审计日志
+          await this.prisma.auditLog.create({
+            data: {
+              adminId: currentUser.id,
+              action: 'create_user',
+              module: 'user',
+              target: `user:${user.id}`,
+              newValue: { username: dto.username, role: dto.role, memberCode },
+            },
+          });
+
+          return user;
+        } catch (error: any) {
+          // Prisma P2002 = PostgreSQL 23505 unique_violation（编号冲突）
+          if (error?.code === 'P2002' && attempt < MAX_RETRIES - 1) {
+            continue; // 重试，重新生成编号
+          }
+          // 用户名重复等其他唯一约束冲突
+          if (error?.code === 'P2002') {
+            throw new ConflictException('组员编号或用户名冲突，请重试');
+          }
+          throw error;
+        }
+      }
+    }
+
+    // 非 operator 或无 cpsGroupCode 的创建流程
     const user = await this.prisma.adminUser.create({
       data: {
         username: dto.username,
@@ -208,6 +285,7 @@ export class UserService {
         level,
         parentId: dto.parentId,
         cpsGroupCode: dto.cpsGroupCode,
+        memberCode,
         avatar: dto.avatar,
         status: 1,
       },
@@ -219,6 +297,7 @@ export class UserService {
         level: true,
         parentId: true,
         cpsGroupCode: true,
+        memberCode: true,
         avatar: true,
         status: true,
         createdAt: true,
@@ -415,5 +494,31 @@ export class UserService {
       },
       orderBy: { role: 'asc' },
     });
+  }
+
+  /**
+   * 生成组员编号（R3 + R15）
+   * 格式: {prefix}-{4位数字}，如 A-0001
+   * 使用原始 SQL 按数值排序取最大值，避免字符串排序错误
+   */
+  async generateMemberCode(cpsGroupCode: string): Promise<string> {
+    const prefix = cpsGroupCode.replace('Group', ''); // 'GroupA' → 'A'
+
+    // R15 修正：使用原始 SQL 按数值排序取最大值
+    const result = await this.prisma.$queryRaw<{ max_seq: number }[]>`
+      SELECT COALESCE(
+        MAX(CAST(SPLIT_PART(member_code, '-', 2) AS INTEGER)),
+        0
+      ) AS max_seq
+      FROM admin_users
+      WHERE cps_group_code = ${cpsGroupCode}
+        AND member_code IS NOT NULL
+        AND role = 'operator'
+    `;
+
+    const nextSeq = (result[0]?.max_seq || 0) + 1;
+
+    // 固定 4 位填充（A-0001 ~ A-9999），字符串排序安全
+    return `${prefix}-${String(nextSeq).padStart(4, '0')}`;
   }
 }

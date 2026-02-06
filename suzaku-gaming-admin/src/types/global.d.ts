@@ -16,13 +16,4 @@ interface ImportMeta {
   readonly env: ImportMetaEnv;
 }
 
-// 路由meta类型
-declare module 'vue-router' {
-  interface RouteMeta {
-    title?: string;
-    icon?: string;
-    breadcrumb?: string[];
-    hidden?: boolean;
-    keepAlive?: boolean;
-  }
-}
+// 路由meta类型扩展已移至 vue-router.d.ts（需为模块文件才能正确增强）

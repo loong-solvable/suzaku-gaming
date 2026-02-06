@@ -85,7 +85,7 @@ const fetchData = async () => {
   }
 };
 
-const handleSearch = (values: Record<string, unknown>) => {
+const handleSearch = (values: any) => {
   console.log("RoleList handleSearch received:", JSON.stringify(values));
   filterParams.value = values;
   pagination.value.page = 1;

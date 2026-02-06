@@ -9,7 +9,7 @@ const systems = ['IPhonePlayer', 'Android'];
 const servers = ['S28', 'S29', 'S30', 'S31'];
 const statuses = ['active', 'inactive', 'banned'];
 const rechargeTypes = ['现金', '战舰币', '礼包'];
-const payChannels = ['6', '8', '9', '31', '32', '63'];
+void ['6', '8', '9', '31', '32', '63']; // payChannels - reserved for future use
 const channel1List = ['Google', 'Facebook', 'TikTok', 'Organic', '-'];
 const channel2List = ['Display', 'Search', 'Video', '-'];
 const channel3List = ['Banner', 'Interstitial', 'Native', '-'];

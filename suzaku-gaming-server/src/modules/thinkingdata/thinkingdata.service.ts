@@ -560,9 +560,15 @@ export class ThinkingDataService {
         "total_recharge_times",
         "total_login_days",
         "#active_time" as register_time,
-        "sdk_last_login_time" as last_login_time
+        "sdk_last_login_time" as last_login_time,
+        "tf_medium"
       FROM ta.v_user_22
       WHERE "create_role_id" IS NOT NULL
+        AND (
+          "tf_medium" ILIKE 'Organic'
+          OR "tf_medium" ILIKE '%自然量%'
+          OR "tf_medium" ILIKE 'WA\\_CPS\\_link%'
+        )
       ORDER BY "#active_time" DESC
       LIMIT ${limit}
     `.trim();
@@ -590,9 +596,15 @@ export class ThinkingDataService {
         "total_recharge_times",
         "total_login_days",
         "#active_time" as register_time,
-        "sdk_last_login_time" as last_login_time
+        "sdk_last_login_time" as last_login_time,
+        "tf_medium"
       FROM ta.v_user_22
       WHERE "create_role_id" IS NOT NULL
+        AND (
+          "tf_medium" ILIKE 'Organic'
+          OR "tf_medium" ILIKE '%自然量%'
+          OR "tf_medium" ILIKE 'WA\\_CPS\\_link%'
+        )
       ORDER BY "#active_time" DESC
     `.trim();
   }
@@ -621,9 +633,15 @@ export class ThinkingDataService {
         "total_recharge_times",
         "total_login_days",
         "#active_time" as register_time,
-        "sdk_last_login_time" as last_login_time
+        "sdk_last_login_time" as last_login_time,
+        "tf_medium"
       FROM ta.v_user_22
       WHERE "create_role_id" IS NOT NULL
+        AND (
+          "tf_medium" ILIKE 'Organic'
+          OR "tf_medium" ILIKE '%自然量%'
+          OR "tf_medium" ILIKE 'WA\\_CPS\\_link%'
+        )
         AND "#active_time" >= TIMESTAMP '${startDate} 00:00:00'
         AND "#active_time" < TIMESTAMP '${endDate} 23:59:59'
       ORDER BY "#active_time" DESC
@@ -670,6 +688,7 @@ export class ThinkingDataService {
       totalLoginDays: number;
       registerTime: Date;
       lastLoginTime: Date | null;
+      tfMedium: string | null;
     }> = [];
 
     for (const row of rows) {
@@ -696,6 +715,7 @@ export class ThinkingDataService {
         totalLoginDays: parseInt(String(row[columnIndex['total_login_days']] || '0'), 10) || 0,
         registerTime: row[columnIndex['register_time']] ? new Date(String(row[columnIndex['register_time']])) : new Date(),
         lastLoginTime: row[columnIndex['last_login_time']] ? new Date(String(row[columnIndex['last_login_time']])) : null,
+        tfMedium: String(row[columnIndex['tf_medium']] || '') || null,
       });
     }
 
@@ -721,16 +741,23 @@ export class ThinkingDataService {
       
       try {
         await this.prisma.$transaction(
-          batch.map(roleData => 
-            this.prisma.role.upsert({
+          batch.map(roleData => {
+            // N2: update 不包含 cpsVisible，避免覆盖已审核通过的角色
+            const { tfMedium: _tf, ...updateData } = roleData;
+            return this.prisma.role.upsert({
               where: { roleId: roleData.roleId },
-              create: roleData,
-              update: {
+              create: {
                 ...roleData,
-                updatedAt: new Date(),
+                cpsVisible: false, // N2: 新角色默认不可见
               },
-            })
-          )
+              update: {
+                ...updateData,
+                tfMedium: roleData.tfMedium, // 同步 tf_medium
+                updatedAt: new Date(),
+                // ⚠️ 不包含 cpsVisible，避免覆盖已审核通过的角色
+              },
+            });
+          })
         );
 
         // 统计新增和更新数量
@@ -746,10 +773,11 @@ export class ThinkingDataService {
         // 批量失败时回退到逐条处理
         for (const roleData of batch) {
           try {
+            const { tfMedium: _tf, ...updateData } = roleData;
             await this.prisma.role.upsert({
               where: { roleId: roleData.roleId },
-              create: roleData,
-              update: { ...roleData, updatedAt: new Date() },
+              create: { ...roleData, cpsVisible: false },
+              update: { ...updateData, tfMedium: roleData.tfMedium, updatedAt: new Date() },
             });
             if (existingSet.has(roleData.roleId)) {
               updated++;

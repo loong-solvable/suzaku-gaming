@@ -28,6 +28,7 @@ model AdminUser {
   level        Int       @default(2) // 0:admin, 1:leader, 2:member
   parentId     Int?      @map("parent_id") // 上级ID
   cpsGroupCode String?   @map("cps_group_code") @db.VarChar(50) // CPS 分组编码
+  memberCode   String?   @map("member_code") @db.VarChar(20) // 组员编号，如 A-0001
 
   // === 自关联 ===
   parent       AdminUser?  @relation("UserHierarchy", fields: [parentId], references: [id])
@@ -35,6 +36,7 @@ model AdminUser {
 
   auditLogs AuditLog[]
 
+  @@unique([cpsGroupCode, memberCode], name: "group_member_unique")
   @@index([level])
   @@index([parentId])
   @@index([cpsGroupCode])
@@ -105,6 +107,7 @@ model Role {
   cpsGroup           String?   @map("cps_group") @db.VarChar(100) // CPS 分组
   cpsBindTime        DateTime? @map("cps_bind_time") // 绑定时间
   cpsBindBy          Int?      @map("cps_bind_by") // 绑定操作人ID
+  cpsVisible         Boolean   @default(false) @map("cps_visible") // 是否在CPS列表中可见
 
   // === 时间戳 ===
   registerTime       DateTime  @map("register_time")
@@ -128,6 +131,7 @@ model Role {
   @@index([status])
   @@index([userId])
   @@index([cpsGroup])
+  @@index([cpsVisible])
   @@map("roles")
 }
 

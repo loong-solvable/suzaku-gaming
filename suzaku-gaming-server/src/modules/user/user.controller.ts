@@ -41,8 +41,8 @@ export class UserController {
   @Get('team-options')
   @Roles('admin', 'manager', 'operator')
   @ApiOperation({ summary: '获取组长和组员选项（用于归因申请）' })
-  async getTeamOptions() {
-    return this.userService.getTeamOptions();
+  async getTeamOptions(@Req() req: Request) {
+    return this.userService.getTeamOptions((req as any).user);
   }
 
   @Get(':id')

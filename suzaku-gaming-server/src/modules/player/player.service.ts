@@ -64,7 +64,8 @@ export class PlayerService {
       sortOrder,
     } = query;
 
-    const where: any = {};
+    // P7: 仅展示已归因角色
+    const where: any = { cpsVisible: true };
 
     if (roleId) {
       where.roleId = { contains: roleId };
@@ -156,12 +157,21 @@ export class PlayerService {
       this.prisma.role.count({ where }),
     ]);
 
+    // P1/R5: 当前页角色 ID 单次聚合，避免 N+1
+    const roleIds = list.map(r => r.roleId);
+    const amounts = roleIds.length > 0 ? await this.prisma.order.groupBy({
+      by: ['roleId'],
+      where: { roleId: { in: roleIds }, isSandbox: false },
+      _sum: { payAmountUsd: true },
+    }) : [];
+    const amountMap = new Map(amounts.map(a => [a.roleId, Number(a._sum.payAmountUsd || 0)]));
+
     return {
       list: list.map((role) => ({
         ...role,
         project: '海战',  // 默认项目名称
         ucid: role.accountId || role.roleId,  // UCID 字段
-        totalRechargeUsd: Number(role.totalRechargeUsd),
+        totalRechargeUsd: amountMap.get(role.roleId) || 0,  // P1: 使用订单聚合值
         lastUpdateTime: role.updatedAt,
         channel1: '-',  // 一级渠道（可从 channelId 映射）
         channel2: '-',  // 二级渠道
@@ -194,7 +204,8 @@ export class PlayerService {
       sortOrder,
     } = query;
 
-    const where: any = {};
+    // P7: 仅展示已归因角色的订单
+    const where: any = { role: { cpsVisible: true } };
 
     if (roleId) {
       where.roleId = { contains: roleId };
@@ -335,7 +346,8 @@ export class PlayerService {
       sortOrder,
     } = query;
 
-    const where: any = {};
+    // P7: 导出也仅含已归因角色
+    const where: any = { cpsVisible: true };
 
     if (roleId) {
       where.roleId = { contains: roleId };
@@ -417,7 +429,21 @@ export class PlayerService {
       },
     });
 
-    return this.toCSV(list, ROLE_EXPORT_COLUMNS);
+    // P1/R5: 导出金额也使用订单聚合口径
+    const roleIds = list.map(r => r.roleId);
+    const amounts = roleIds.length > 0 ? await this.prisma.order.groupBy({
+      by: ['roleId'],
+      where: { roleId: { in: roleIds }, isSandbox: false },
+      _sum: { payAmountUsd: true },
+    }) : [];
+    const amountMap = new Map(amounts.map(a => [a.roleId, Number(a._sum.payAmountUsd || 0)]));
+
+    const exportList = list.map(role => ({
+      ...role,
+      totalRechargeUsd: amountMap.get(role.roleId) || 0,
+    }));
+
+    return this.toCSV(exportList, ROLE_EXPORT_COLUMNS);
   }
 
   /**
@@ -438,7 +464,8 @@ export class PlayerService {
       sortOrder,
     } = query;
 
-    const where: any = {};
+    // P7: 导出也仅含已归因角色的订单
+    const where: any = { role: { cpsVisible: true } };
 
     if (roleId) {
       where.roleId = { contains: roleId };

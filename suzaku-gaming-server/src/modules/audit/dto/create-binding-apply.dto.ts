@@ -1,5 +1,5 @@
 // src/modules/audit/dto/create-binding-apply.dto.ts
-import { IsString, IsInt, IsOptional, IsArray } from 'class-validator';
+import { IsString, IsInt, IsOptional, IsArray, ArrayMinSize, ArrayMaxSize } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateBindingApplyDto {
@@ -44,10 +44,12 @@ export class CreateBindingApplyDto {
   @IsString()
   applicant: string;
 
-  @ApiPropertyOptional()
-  @IsOptional()
+  @ApiProperty({ description: '截图附件（3-5张）' })
   @IsArray()
-  attachments?: string[];
+  @ArrayMinSize(3, { message: '至少需要上传3张截图' })
+  @ArrayMaxSize(5, { message: '最多上传5张截图' })
+  @IsString({ each: true, message: '每个附件必须是字符串URL' })
+  attachments: string[];
 
   @ApiPropertyOptional()
   @IsOptional()

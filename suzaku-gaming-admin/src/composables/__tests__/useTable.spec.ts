@@ -13,7 +13,7 @@ vi.mock('vue', async () => {
 });
 
 describe('useTable', () => {
-  let mockFetchApi: ReturnType<typeof vi.fn>;
+  let mockFetchApi: any;
 
   beforeEach(() => {
     mockFetchApi = vi.fn().mockResolvedValue({

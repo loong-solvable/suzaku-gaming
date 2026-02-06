@@ -565,9 +565,9 @@ export class ThinkingDataService {
       FROM ta.v_user_22
       WHERE "create_role_id" IS NOT NULL
         AND (
-          "tf_medium" ILIKE 'Organic'
-          OR "tf_medium" ILIKE '%自然量%'
-          OR "tf_medium" ILIKE 'WA\\_CPS\\_link%'
+          "tf_medium" LIKE 'Organic'
+          OR "tf_medium" LIKE '%自然量%'
+          OR "tf_medium" LIKE 'WA\\_CPS\\_link%'
         )
       ORDER BY "#active_time" DESC
       LIMIT ${limit}
@@ -601,9 +601,9 @@ export class ThinkingDataService {
       FROM ta.v_user_22
       WHERE "create_role_id" IS NOT NULL
         AND (
-          "tf_medium" ILIKE 'Organic'
-          OR "tf_medium" ILIKE '%自然量%'
-          OR "tf_medium" ILIKE 'WA\\_CPS\\_link%'
+          "tf_medium" LIKE 'Organic'
+          OR "tf_medium" LIKE '%自然量%'
+          OR "tf_medium" LIKE 'WA\\_CPS\\_link%'
         )
       ORDER BY "#active_time" DESC
     `.trim();
@@ -638,9 +638,9 @@ export class ThinkingDataService {
       FROM ta.v_user_22
       WHERE "create_role_id" IS NOT NULL
         AND (
-          "tf_medium" ILIKE 'Organic'
-          OR "tf_medium" ILIKE '%自然量%'
-          OR "tf_medium" ILIKE 'WA\\_CPS\\_link%'
+          "tf_medium" LIKE 'Organic'
+          OR "tf_medium" LIKE '%自然量%'
+          OR "tf_medium" LIKE 'WA\\_CPS\\_link%'
         )
         AND "#active_time" >= TIMESTAMP '${startDate} 00:00:00'
         AND "#active_time" < TIMESTAMP '${endDate} 23:59:59'

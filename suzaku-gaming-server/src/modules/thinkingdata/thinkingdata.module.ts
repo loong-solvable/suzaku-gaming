@@ -4,11 +4,12 @@ import { ConfigModule } from '@nestjs/config';
 import { ThinkingDataService } from './thinkingdata.service';
 import { ThinkingDataScheduler } from './thinkingdata.scheduler';
 import { ThinkingDataController } from './thinkingdata.controller';
+import { TaDatatableService } from './ta-datatable.service';
 
 @Module({
   imports: [ConfigModule],
   controllers: [ThinkingDataController],
-  providers: [ThinkingDataService, ThinkingDataScheduler],
-  exports: [ThinkingDataService],
+  providers: [ThinkingDataService, ThinkingDataScheduler, TaDatatableService],
+  exports: [ThinkingDataService, TaDatatableService],
 })
 export class ThinkingDataModule {}

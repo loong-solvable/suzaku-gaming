@@ -11,6 +11,7 @@ import { QueryBindingAppliesDto } from './dto/query-binding-applies.dto';
 import { CreateBindingApplyDto } from './dto/create-binding-apply.dto';
 import { UpdateBindingApplyDto } from './dto/update-binding-apply.dto';
 import { ReviewBindingApplyDto } from './dto/review-binding-apply.dto';
+import { TaDatatableService } from '../thinkingdata/ta-datatable.service';
 
 // CSV 导出列配置
 const BINDING_APPLY_EXPORT_COLUMNS = [
@@ -41,7 +42,10 @@ interface CurrentUser {
 
 @Injectable()
 export class AuditService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private taDatatableService: TaDatatableService,
+  ) {}
 
   // ===== 权限隔离辅助方法（R2 完整方案 §4.1） =====
 
@@ -449,7 +453,7 @@ export class AuditService {
     const newStatus = dto.action === 'approve' ? 'approved' : 'rejected';
 
     // R12 + R19: 使用事务，不吞异常，原子更新防并发
-    return this.prisma.$transaction(async (tx) => {
+    const result = await this.prisma.$transaction(async (tx) => {
       // R19 原子更新：WHERE 条件包含 status='pending'，防止并发双通过
       const updateResult = await tx.bindingApply.updateMany({
         where: { id, status: 'pending' },  // ← 原子条件
@@ -498,6 +502,14 @@ export class AuditService {
       // updateMany 不返回记录，需重新查询返回
       return tx.bindingApply.findUnique({ where: { id } });
     });
+
+    // 审批通过后回写数数平台 CPS 维度表（fire-and-forget，不阻塞返回）
+    if (dto.action === 'approve') {
+      this.taDatatableService.writeCpsDim(apply.roleId, apply.platform || '')
+        .catch(() => {});
+    }
+
+    return result;
   }
 
   // ===== 失败日志 =====

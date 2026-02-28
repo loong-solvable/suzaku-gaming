@@ -53,6 +53,8 @@ services:
       TA_API_HOST: ${TA_API_HOST:-}
       TA_PROJECT_TOKEN: ${TA_PROJECT_TOKEN:-}
       TA_SYNC_ENABLED: ${TA_SYNC_ENABLED:-false}
+      TA_PROJECT_ID: ${TA_PROJECT_ID:-22}
+      TA_DATATABLE_NAME: ${TA_DATATABLE_NAME:-cps_group}
     ports:
       - "3000:3000"
     depends_on:

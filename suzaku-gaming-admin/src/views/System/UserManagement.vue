@@ -114,6 +114,19 @@
             <el-option label="组员" value="operator" />
           </el-select>
         </el-form-item>
+        <el-form-item v-if="!isEdit && formData.role === 'manager'" label="组名" prop="cpsGroupCode">
+          <el-input v-model="formData.cpsGroupCode" placeholder="请输入CPS组名编码，如 GroupA" />
+        </el-form-item>
+        <el-form-item v-if="!isEdit && formData.role === 'operator' && isAdmin" label="所属组长" prop="parentId">
+          <el-select v-model="formData.parentId" placeholder="请选择所属组长" style="width: 100%" @change="handleManagerChange">
+            <el-option
+              v-for="m in managerOptions"
+              :key="m.id"
+              :label="`${m.realName} (${m.cpsGroupCode})`"
+              :value="m.id"
+            />
+          </el-select>
+        </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="dialogVisible = false">取消</el-button>
@@ -140,7 +153,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted } from 'vue';
+import { ref, reactive, computed, watch, onMounted } from 'vue';
 import { ElMessage, ElMessageBox, type FormInstance } from 'element-plus';
 import { userApi, type UserInfo } from '@/api/user';
 import { useUserStore } from '@/stores/user';
@@ -179,6 +192,8 @@ const formData = reactive({
   password: '',
   realName: '',
   role: 'operator',
+  cpsGroupCode: '',
+  parentId: undefined as number | undefined,
 });
 
 const formRules = {
@@ -186,6 +201,26 @@ const formRules = {
   password: [{ required: true, message: '请输入密码', trigger: 'blur' }, { min: 6, message: '密码至少6位', trigger: 'blur' }],
   realName: [{ required: true, message: '请输入真实姓名', trigger: 'blur' }],
   role: [{ required: true, message: '请选择角色', trigger: 'change' }],
+  cpsGroupCode: [{
+    validator: (_rule: any, value: string, callback: Function) => {
+      if (formData.role === 'manager' && !isEdit.value && !value) {
+        callback(new Error('创建组长时组名不能为空'));
+      } else {
+        callback();
+      }
+    },
+    trigger: 'blur',
+  }],
+  parentId: [{
+    validator: (_rule: any, value: any, callback: Function) => {
+      if (formData.role === 'operator' && isAdmin.value && !isEdit.value && !value) {
+        callback(new Error('请选择所属组长'));
+      } else {
+        callback();
+      }
+    },
+    trigger: 'change',
+  }],
 };
 
 const resetPwdForm = reactive({
@@ -224,6 +259,28 @@ const formatTime = (time?: string) => {
   if (!time) return '-';
   return time.replace('T', ' ').slice(0, 19);
 };
+
+const managerOptions = ref<{ id: number; username: string; realName: string; cpsGroupCode?: string }[]>([]);
+
+const loadManagerOptions = async () => {
+  try {
+    const res = await userApi.getTeamOptions();
+    managerOptions.value = (res.groups || res.managers || [])
+      .filter((g: any) => !!g.cpsGroupCode);
+  } catch (e) {
+    console.error('加载组长列表失败:', e);
+  }
+};
+
+const handleManagerChange = (managerId: number) => {
+  const manager = managerOptions.value.find(m => m.id === managerId);
+  formData.cpsGroupCode = manager?.cpsGroupCode || '';
+};
+
+watch(() => formData.role, () => {
+  formData.cpsGroupCode = '';
+  formData.parentId = undefined;
+});
 
 const fetchData = async () => {
   loading.value = true;
@@ -274,6 +331,11 @@ const handleCreate = () => {
   formData.password = '';
   formData.realName = '';
   formData.role = 'operator';
+  formData.cpsGroupCode = '';
+  formData.parentId = undefined;
+  if (isAdmin.value) {
+    loadManagerOptions();
+  }
   dialogVisible.value = true;
 };
 
@@ -305,6 +367,12 @@ const handleSubmit = async () => {
         password: formData.password,
         realName: formData.realName,
         role: formData.role,
+        ...(formData.role === 'manager' && formData.cpsGroupCode
+          ? { cpsGroupCode: formData.cpsGroupCode }
+          : {}),
+        ...(formData.role === 'operator' && isAdmin.value && formData.parentId
+          ? { parentId: formData.parentId, cpsGroupCode: formData.cpsGroupCode }
+          : {}),
       });
       ElMessage.success('创建成功');
     }

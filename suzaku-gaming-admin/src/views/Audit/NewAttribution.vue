@@ -171,6 +171,7 @@ const form = reactive({
 // 上传的文件列表
 const fileList = ref<UploadFile[]>([]);
 const uploadedCount = computed(() => fileList.value.filter(f => f.status === 'success').length);
+const failedCount = computed(() => fileList.value.filter(f => f.status === 'fail').length);
 
 // 非管理员自动设置组名
 onMounted(() => {
@@ -254,12 +255,24 @@ const handleSubmit = async () => {
     return;
   }
 
-  // 前端校验：截图 3-5 张
-  if (uploadedCount.value < 3) {
-    ElMessage.error('至少需要上传 3 张截图！');
+  // 前端校验：截图状态和数量
+  const successCount = fileList.value.filter(f => f.status === 'success').length;
+  const failCount = fileList.value.filter(f => f.status === 'fail').length;
+  const uploadingCount = fileList.value.filter(f => f.status === 'uploading' || f.status === 'ready').length;
+
+  if (uploadingCount > 0) {
+    ElMessage.warning('有图片正在上传中，请等待上传完成');
     return;
   }
-  if (uploadedCount.value > 5) {
+  if (failCount > 0) {
+    ElMessage.error(`有 ${failCount} 张图片上传失败，请删除后重新上传`);
+    return;
+  }
+  if (successCount < 3) {
+    ElMessage.error(`至少需要上传 3 张截图，当前成功 ${successCount} 张`);
+    return;
+  }
+  if (successCount > 5) {
     ElMessage.error('最多只能上传 5 张截图！');
     return;
   }
@@ -410,6 +423,9 @@ const handleCancel = () => {
               <p class="hint-text">上传图片为 jpg/png/gif/webp 文件，且不超过 500KB</p>
               <p class="hint-count">
                 已上传 <span :class="{ 'count-ok': uploadedCount >= 3, 'count-warning': uploadedCount < 3 }">{{ uploadedCount }}/5</span> 张图片，需上传 3-5 张且全部上传成功后方可提交
+                <span v-if="failedCount > 0" class="count-failed">
+                  （{{ failedCount }} 张上传失败，请删除后重新上传）
+                </span>
               </p>
             </div>
           </div>
@@ -549,6 +565,9 @@ const handleCancel = () => {
   }
   .count-ok {
     color: #67C23A;
+  }
+  .count-failed {
+    color: #F56C6C;
   }
 }
 

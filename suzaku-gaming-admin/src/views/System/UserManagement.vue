@@ -255,9 +255,32 @@ const getRoleTagType = (role: string) => {
   return map[role] || '';
 };
 
+const beijingDateTimeFormatter = new Intl.DateTimeFormat('zh-CN', {
+  timeZone: 'Asia/Shanghai',
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+  hour: '2-digit',
+  minute: '2-digit',
+  second: '2-digit',
+  hour12: false,
+});
+
 const formatTime = (time?: string) => {
   if (!time) return '-';
-  return time.replace('T', ' ').slice(0, 19);
+
+  const date = new Date(time);
+  if (Number.isNaN(date.getTime())) {
+    return time;
+  }
+
+  const parts = beijingDateTimeFormatter.formatToParts(date);
+  const getPart = (type: string) =>
+    parts.find((part) => part.type === type)?.value || '';
+
+  const hour = getPart('hour') === '24' ? '00' : getPart('hour');
+
+  return `${getPart('year')}-${getPart('month')}-${getPart('day')} ${hour}:${getPart('minute')}:${getPart('second')}`;
 };
 
 const managerOptions = ref<{ id: number; username: string; realName: string; cpsGroupCode?: string }[]>([]);

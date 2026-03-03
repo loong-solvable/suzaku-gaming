@@ -75,7 +75,9 @@ service.interceptors.response.use(
       }
     }
 
-    const errorMap: Record<number, string> = {
+    const serverMessage = error.response.data?.message;
+
+    const fallbackMap: Record<number, string> = {
       400: '请求参数错误',
       401: '登录已过期，请重新登录',
       403: '没有权限访问',
@@ -85,7 +87,7 @@ service.interceptors.response.use(
       503: '服务暂时不可用'
     };
 
-    ElMessage.error(errorMap[status] || `请求失败 (${status})`);
+    ElMessage.error(serverMessage || fallbackMap[status] || `请求失败 (${status})`);
 
     return Promise.reject(error);
   }

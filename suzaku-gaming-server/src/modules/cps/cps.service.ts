@@ -27,14 +27,7 @@ interface TAQueryResponse {
   };
 }
 
-// 当前用户接口
-interface CurrentUser {
-  id: number;
-  username: string;
-  role: string;
-  level?: number;
-  cpsGroupCode?: string;
-}
+import type { CurrentUser } from '../../common/interfaces/current-user.interface';
 
 @Injectable()
 export class CpsService {

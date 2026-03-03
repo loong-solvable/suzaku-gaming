@@ -31,14 +31,14 @@ export class ThinkingDataScheduler implements OnModuleInit {
 
   onModuleInit() {
     if (this.syncEnabled) {
-      this.logger.log('ThinkingData sync scheduler initialized (incremental sync every 30 minutes)');
+      this.logger.log('ThinkingData sync scheduler initialized (incremental sync every 5 minutes)');
     } else {
       this.logger.warn('ThinkingData sync is DISABLED');
     }
   }
 
-  // 每 30 分钟执行增量数据同步
-  @Cron('0 */30 * * * *', {
+  // 每 5 分钟执行增量数据同步
+  @Cron('0 */5 * * * *', {
     name: 'thinkingdata-incremental-sync',
     timeZone: 'Asia/Shanghai',
   })

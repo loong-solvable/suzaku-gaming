@@ -12,6 +12,7 @@ import { CreateBindingApplyDto } from './dto/create-binding-apply.dto';
 import { UpdateBindingApplyDto } from './dto/update-binding-apply.dto';
 import { ReviewBindingApplyDto } from './dto/review-binding-apply.dto';
 import { TaDatatableService } from '../thinkingdata/ta-datatable.service';
+import type { CurrentUser } from '../../common/interfaces/current-user.interface';
 
 // CSV 导出列配置
 const BINDING_APPLY_EXPORT_COLUMNS = [
@@ -30,15 +31,6 @@ const BINDING_APPLY_EXPORT_COLUMNS = [
   { key: 'applyTime', header: '申请时间' },
   { key: 'reviewTime', header: '审核时间' },
 ];
-
-// 当前用户接口
-interface CurrentUser {
-  id: number;
-  username: string;
-  role: string;
-  level?: number;
-  cpsGroupCode?: string;
-}
 
 @Injectable()
 export class AuditService {
@@ -413,6 +405,10 @@ export class AuditService {
 
     if (!apply) {
       throw new NotFoundException('绑定申请不存在');
+    }
+
+    if (apply.status === 'approved') {
+      throw new BadRequestException('已通过的绑定申请不允许删除');
     }
 
     await this.prisma.bindingApply.delete({

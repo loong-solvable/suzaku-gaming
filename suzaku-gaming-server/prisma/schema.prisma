@@ -225,6 +225,13 @@ model BindingApply {
   @@index([applicant])
   @@index([applyTime])
   @@index([project])
+  @@index([roleId])
+  @@index([platform])
+  @@index([teamLeader])
+  @@index([status, roleId])
+  @@index([status, platform])
+  @@index([status, teamLeader])
+  @@index([status, applicant])
   @@map("binding_applies")
 }
 

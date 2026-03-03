@@ -1,146 +1,102 @@
 // src/modules/dashboard/dashboard.service.ts
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../shared/prisma/prisma.service';
+import { Prisma } from '@prisma/client';
 import dayjs from 'dayjs';
+import type { CurrentUser } from '../../common/interfaces/current-user.interface';
+
+interface DashboardMetricsRow {
+  today_new_players: number;
+  month_new_players: number;
+  total_players: number;
+  today_paid_players: number;
+  today_paid_amount: number;
+  month_paid_players: number;
+  month_paid_amount: number;
+  total_paid_players: number;
+  total_paid_amount: number;
+}
 
 @Injectable()
 export class DashboardService {
   constructor(private prisma: PrismaService) {}
 
-  async getStatistics() {
-    const today = dayjs().startOf('day');
-    const startOfMonth = dayjs().startOf('month');
+  private buildScopeCondition(user: CurrentUser): Prisma.Sql {
+    if (user.level === 0) {
+      return Prisma.sql`TRUE`;
+    }
 
-    // 今日数据
-    const todayStats = await this.getTodayStats(today.toDate());
+    if (user.level === 1) {
+      return Prisma.sql`(
+        ba.platform = ${user.cpsGroupCode}
+        OR ba.team_leader = ${user.username}
+      )`;
+    }
 
-    // 本月数据
-    const monthlyStats = await this.getMonthlyStats(startOfMonth.toDate());
-
-    // 历史累计数据
-    const totalStats = await this.getTotalStats();
-
-    return {
-      today: todayStats,
-      monthly: monthlyStats,
-      total: totalStats,
-    };
+    return Prisma.sql`ba.applicant = ${user.username}`;
   }
 
-  private async getTodayStats(startOfDay: Date) {
-    const endOfDay = dayjs(startOfDay).endOf('day').toDate();
+  async getStatistics(currentUser: CurrentUser) {
+    const todayStart = dayjs().startOf('day').toDate();
+    const tomorrow = dayjs().add(1, 'day').startOf('day').toDate();
+    const monthStart = dayjs().startOf('month').toDate();
+    const nextMonth = dayjs().add(1, 'month').startOf('month').toDate();
 
-    // 新增玩家
-    const newPlayers = await this.prisma.role.count({
-      where: {
-        registerTime: {
-          gte: startOfDay,
-          lte: endOfDay,
-        },
-      },
-    });
+    const scopeCondition = this.buildScopeCondition(currentUser);
 
-    // 付费玩家和金额
-    const paymentStats = await this.prisma.order.aggregate({
-      where: {
-        payTime: {
-          gte: startOfDay,
-          lte: endOfDay,
-        },
-        isSandbox: false,
-      },
-      _sum: {
-        payAmountUsd: true,
-      },
-    });
+    const rows = await this.prisma.$queryRaw<DashboardMetricsRow[]>(Prisma.sql`
+      WITH scoped_roles AS (
+        SELECT DISTINCT ba.role_id
+        FROM binding_applies ba
+        WHERE ba.status = 'approved'
+          AND ${scopeCondition}
+      ),
+      role_metrics AS (
+        SELECT
+          COUNT(*) FILTER (WHERE r.register_time >= ${todayStart} AND r.register_time < ${tomorrow})::int AS today_new_players,
+          COUNT(*) FILTER (WHERE r.register_time >= ${monthStart} AND r.register_time < ${nextMonth})::int AS month_new_players,
+          COUNT(*)::int AS total_players
+        FROM roles r
+        INNER JOIN scoped_roles sr ON sr.role_id = r.role_id
+      ),
+      order_metrics AS (
+        SELECT
+          COUNT(DISTINCT o.role_id) FILTER (WHERE o.pay_time >= ${todayStart} AND o.pay_time < ${tomorrow})::int AS today_paid_players,
+          COALESCE(SUM(o.pay_amount_usd) FILTER (WHERE o.pay_time >= ${todayStart} AND o.pay_time < ${tomorrow}), 0)::double precision AS today_paid_amount,
+          COUNT(DISTINCT o.role_id) FILTER (WHERE o.pay_time >= ${monthStart} AND o.pay_time < ${nextMonth})::int AS month_paid_players,
+          COALESCE(SUM(o.pay_amount_usd) FILTER (WHERE o.pay_time >= ${monthStart} AND o.pay_time < ${nextMonth}), 0)::double precision AS month_paid_amount,
+          COUNT(DISTINCT o.role_id)::int AS total_paid_players,
+          COALESCE(SUM(o.pay_amount_usd), 0)::double precision AS total_paid_amount
+        FROM orders o
+        INNER JOIN scoped_roles sr ON sr.role_id = o.role_id
+        WHERE o.is_sandbox = false
+      )
+      SELECT rm.*, om.*
+      FROM role_metrics rm
+      CROSS JOIN order_metrics om
+    `);
 
-    const paidPlayersResult = await this.prisma.order.groupBy({
-      by: ['roleId'],
-      where: {
-        payTime: {
-          gte: startOfDay,
-          lte: endOfDay,
-        },
-        isSandbox: false,
-      },
-    });
-
-    return {
-      newPlayers,
-      activePlayers: newPlayers || paidPlayersResult.length, // 临时使用付费玩家作为活跃
-      paidPlayers: paidPlayersResult.length,
-      paidAmount: Number(paymentStats._sum.payAmountUsd || 0),
-    };
-  }
-
-  private async getMonthlyStats(startOfMonth: Date) {
-    const endOfMonth = dayjs(startOfMonth).endOf('month').toDate();
-
-    const newPlayers = await this.prisma.role.count({
-      where: {
-        registerTime: {
-          gte: startOfMonth,
-          lte: endOfMonth,
-        },
-      },
-    });
-
-    const paymentStats = await this.prisma.order.aggregate({
-      where: {
-        payTime: {
-          gte: startOfMonth,
-          lte: endOfMonth,
-        },
-        isSandbox: false,
-      },
-      _sum: {
-        payAmountUsd: true,
-      },
-    });
-
-    const paidPlayersResult = await this.prisma.order.groupBy({
-      by: ['roleId'],
-      where: {
-        payTime: {
-          gte: startOfMonth,
-          lte: endOfMonth,
-        },
-        isSandbox: false,
-      },
-    });
+    const row = rows[0];
 
     return {
-      newPlayers,
-      activePlayers: newPlayers || paidPlayersResult.length,
-      paidPlayers: paidPlayersResult.length,
-      paidAmount: Number(paymentStats._sum.payAmountUsd || 0),
-    };
-  }
-
-  private async getTotalStats() {
-    const totalPlayers = await this.prisma.role.count();
-
-    const paymentStats = await this.prisma.order.aggregate({
-      where: {
-        isSandbox: false,
+      today: {
+        newPlayers: row?.today_new_players ?? 0,
+        activePlayers: (row?.today_new_players || row?.today_paid_players) ?? 0,
+        paidPlayers: row?.today_paid_players ?? 0,
+        paidAmount: row?.today_paid_amount ?? 0,
       },
-      _sum: {
-        payAmountUsd: true,
+      monthly: {
+        newPlayers: row?.month_new_players ?? 0,
+        activePlayers: (row?.month_new_players || row?.month_paid_players) ?? 0,
+        paidPlayers: row?.month_paid_players ?? 0,
+        paidAmount: row?.month_paid_amount ?? 0,
       },
-    });
-
-    const paidPlayersResult = await this.prisma.order.groupBy({
-      by: ['roleId'],
-      where: {
-        isSandbox: false,
+      total: {
+        newPlayers: row?.total_players ?? 0,
+        activePlayers: (row?.total_players || row?.total_paid_players) ?? 0,
+        paidPlayers: row?.total_paid_players ?? 0,
+        paidAmount: row?.total_paid_amount ?? 0,
       },
-    });
-
-    return {
-      newPlayers: totalPlayers,
-      activePlayers: totalPlayers,
-      paidPlayers: paidPlayersResult.length,
-      paidAmount: Number(paymentStats._sum.payAmountUsd || 0),
     };
   }
 }

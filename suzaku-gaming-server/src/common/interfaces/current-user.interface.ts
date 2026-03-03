@@ -6,5 +6,6 @@ export interface CurrentUser {
   level: number;
   parentId: number | null;
   cpsGroupCode: string | null;
+  memberCode: string | null;
   status: number;
 }

@@ -23,7 +23,8 @@ const tableColumns = [
   { prop: "rechargeType", label: "订单类型", width: 80 },
   { prop: "orderId", label: "订单号", minWidth: 200 },
   { prop: "payChannel", label: "充值渠道", width: 90 },
-  { prop: "channel1", label: "一级渠道", width: 90 }
+  { prop: "cpsGroup", label: "组", width: 80 },
+  { prop: "teamMember", label: "组员", width: 90 }
 ];
 
 const tableData = ref<Record<string, unknown>[]>([]);
@@ -56,7 +57,7 @@ const fetchData = async () => {
     });
     
     // 添加筛选参数（排除前端专用参数）
-    const frontendOnlyKeys = ['timezone', 'gameProject', 'channel1', 'channel2', 'channel3'];
+    const frontendOnlyKeys = ['timezone', 'gameProject'];
     Object.entries(filterParams.value).forEach(([key, value]) => {
       // 跳过空值、空字符串、空数组、前端专用参数
       if (value === undefined || value === null || value === '') return;

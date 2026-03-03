@@ -217,22 +217,36 @@ const beforeUpload: UploadProps['beforeUpload'] = (rawFile) => {
   return true;
 };
 
+const refreshFileList = () => {
+  fileList.value = [...fileList.value];
+};
+
 const handleFileChange: UploadProps['onChange'] = async (uploadFile, uploadFiles) => {
   fileList.value = uploadFiles;
 
   if (uploadFile.raw && uploadFile.status === 'ready') {
     try {
       uploadFile.status = 'uploading';
-      const result = await uploadApi.uploadImage(uploadFile.raw);
+      uploadFile.percentage = 0;
+      refreshFileList();
+
+      const result = await uploadApi.uploadImage(uploadFile.raw, (percent) => {
+        uploadFile.percentage = percent;
+        refreshFileList();
+      });
+
       uploadFile.status = 'success';
+      uploadFile.percentage = 100;
       uploadFile.url = result.url;
-      // 更新 attachments 数组
+      refreshFileList();
+
       form.attachments = fileList.value
         .filter(f => f.status === 'success' && f.url)
         .map(f => f.url as string);
       ElMessage.success('上传成功');
     } catch (error: any) {
       uploadFile.status = 'fail';
+      refreshFileList();
       ElMessage.error(error?.message || '上传失败');
     }
   }

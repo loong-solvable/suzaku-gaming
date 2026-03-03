@@ -38,6 +38,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         level: true,           // 权限层级
         parentId: true,        // 上级ID
         cpsGroupCode: true,    // CPS 分组编码
+        memberCode: true,      // 组员编号
         status: true,
       },
     });

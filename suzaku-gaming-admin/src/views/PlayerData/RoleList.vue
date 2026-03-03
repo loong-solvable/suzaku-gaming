@@ -23,9 +23,8 @@ const tableColumns = [
   { prop: "lastUpdateTime", label: "最后更改时间", minWidth: 140, sortable: true },
   { prop: "totalRechargeUsd", label: "总付费金额", minWidth: 100, sortable: true },
   { prop: "totalRechargeTimes", label: "总付费笔数", width: 100 },
-  { prop: "channel1", label: "一级渠道", minWidth: 90 },
-  { prop: "channel2", label: "二级渠道", minWidth: 90 },
-  { prop: "channel3", label: "三级渠道", minWidth: 90 }
+  { prop: "cpsGroup", label: "组", minWidth: 80 },
+  { prop: "teamMember", label: "组员", minWidth: 90 }
 ];
 
 const tableData = ref<Record<string, unknown>[]>([]);
@@ -47,7 +46,7 @@ const fetchData = async () => {
     });
     
     // 添加筛选参数（排除前端专用参数）
-    const frontendOnlyKeys = ['timezone', 'gameProject', 'channel1', 'channel2', 'channel3'];
+    const frontendOnlyKeys = ['timezone', 'gameProject'];
     Object.entries(filterParams.value).forEach(([key, value]) => {
       // 跳过空值、空字符串、空数组、前端专用参数
       if (value === undefined || value === null || value === '') return;
@@ -86,7 +85,6 @@ const fetchData = async () => {
 };
 
 const handleSearch = (values: any) => {
-  console.log("RoleList handleSearch received:", JSON.stringify(values));
   filterParams.value = values;
   pagination.value.page = 1;
   fetchData();

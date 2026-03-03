@@ -62,10 +62,28 @@ export class PlayerService {
       registerTimeEnd,
       sortBy,
       sortOrder,
+      cpsGroup,
+      teamMember,
     } = query;
 
     // P7: 仅展示已归因角色
     const where: any = { cpsVisible: true };
+
+    // CPS 分组筛选（直接查 roles.cpsGroup）
+    if (cpsGroup) {
+      where.cpsGroup = cpsGroup;
+    }
+    // 组员筛选：先查 binding_applies 获取该组员绑定的 roleId 集合
+    if (teamMember) {
+      const applies = await this.prisma.bindingApply.findMany({
+        where: { teamMember, status: 'approved' },
+        select: { roleId: true },
+      });
+      const roleIdsByMember = applies.map(a => a.roleId);
+      where.roleId = roleIdsByMember.length > 0
+        ? { in: roleIdsByMember }
+        : 'NONE';
+    }
 
     if (roleId) {
       where.roleId = { contains: roleId };
@@ -166,17 +184,26 @@ export class PlayerService {
     }) : [];
     const amountMap = new Map(amounts.map(a => [a.roleId, Number(a._sum.payAmountUsd || 0)]));
 
+    // 查询当前页角色的归因绑定信息（组/组员）
+    const bindingApplies = roleIds.length > 0 ? await this.prisma.bindingApply.findMany({
+      where: { roleId: { in: roleIds }, status: 'approved' },
+      select: { roleId: true, platform: true, teamMember: true },
+    }) : [];
+    const bindingMap = new Map(bindingApplies.map(a => [a.roleId, a]));
+
     return {
-      list: list.map((role) => ({
-        ...role,
-        project: '海战',  // 默认项目名称
-        ucid: role.accountId || role.roleId,  // UCID 字段
-        totalRechargeUsd: amountMap.get(role.roleId) || 0,  // P1: 使用订单聚合值
-        lastUpdateTime: role.updatedAt,
-        channel1: '-',  // 一级渠道（可从 channelId 映射）
-        channel2: '-',  // 二级渠道
-        channel3: '-',  // 三级渠道
-      })),
+      list: list.map((role) => {
+        const binding = bindingMap.get(role.roleId);
+        return {
+          ...role,
+          project: '海战',
+          ucid: role.accountId || role.roleId,
+          totalRechargeUsd: amountMap.get(role.roleId) || 0,
+          lastUpdateTime: role.updatedAt,
+          cpsGroup: binding?.platform || '-',
+          teamMember: binding?.teamMember || '-',
+        };
+      }),
       pagination: {
         page,
         pageSize,
@@ -202,10 +229,28 @@ export class PlayerService {
       payTimeEnd,
       sortBy,
       sortOrder,
+      cpsGroup,
+      teamMember,
     } = query;
 
     // P7: 仅展示已归因角色的订单
     const where: any = { role: { cpsVisible: true } };
+
+    // CPS 分组筛选（通过关联角色的 cpsGroup）
+    if (cpsGroup) {
+      where.role = { ...where.role, cpsGroup };
+    }
+    // 组员筛选：先查 binding_applies 获取该组员绑定的 roleId 集合
+    if (teamMember) {
+      const applies = await this.prisma.bindingApply.findMany({
+        where: { teamMember, status: 'approved' },
+        select: { roleId: true },
+      });
+      const roleIdsByMember = applies.map(a => a.roleId);
+      where.roleId = roleIdsByMember.length > 0
+        ? { in: roleIdsByMember }
+        : 'NONE';
+    }
 
     if (roleId) {
       where.roleId = { contains: roleId };
@@ -305,13 +350,26 @@ export class PlayerService {
       }),
     ]);
 
+    // 查询当前页订单对应角色的归因绑定信息（组/组员）
+    const orderRoleIds = [...new Set(list.map(o => o.roleId))];
+    const orderBindings = orderRoleIds.length > 0 ? await this.prisma.bindingApply.findMany({
+      where: { roleId: { in: orderRoleIds }, status: 'approved' },
+      select: { roleId: true, platform: true, teamMember: true },
+    }) : [];
+    const orderBindingMap = new Map(orderBindings.map(a => [a.roleId, a]));
+
     return {
-      list: list.map((order) => ({
-        ...order,
-        amount: Number(order.payAmountUsd),
-        currency: 'USD',
-        lastLoginTime: order.role?.lastLoginTime,
-      })),
+      list: list.map((order) => {
+        const binding = orderBindingMap.get(order.roleId);
+        return {
+          ...order,
+          amount: Number(order.payAmountUsd),
+          currency: 'USD',
+          lastLoginTime: order.role?.lastLoginTime,
+          cpsGroup: binding?.platform || '-',
+          teamMember: binding?.teamMember || '-',
+        };
+      }),
       pagination: {
         page,
         pageSize,

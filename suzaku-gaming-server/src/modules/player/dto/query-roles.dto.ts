@@ -80,4 +80,14 @@ export class QueryRolesDto {
   @IsOptional()
   @IsString()
   sortOrder?: 'asc' | 'desc';
+
+  @ApiPropertyOptional({ description: 'CPS 分组编码，如 GroupA' })
+  @IsOptional()
+  @IsString()
+  cpsGroup?: string;
+
+  @ApiPropertyOptional({ description: '组员编号，如 A-0001' })
+  @IsOptional()
+  @IsString()
+  teamMember?: string;
 }

@@ -33,7 +33,12 @@ export class DashboardService {
       )`;
     }
 
-    return Prisma.sql`ba.applicant = ${user.username}`;
+    // Operator: 看到自己提交的 + 别人为自己绑定的
+    const conditions = [Prisma.sql`ba.applicant = ${user.username}`];
+    if (user.memberCode) {
+      conditions.push(Prisma.sql`ba.team_member = ${user.memberCode}`);
+    }
+    return Prisma.sql`(${Prisma.join(conditions, ' OR ')})`;
   }
 
   async getStatistics(currentUser: CurrentUser) {

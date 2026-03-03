@@ -17,10 +17,10 @@ async function main() {
 
   // === 核心账户定义 ===
   const accounts = [
-    { username: 'admin',    role: 'admin',   level: 0, cpsGroupCode: null,     realName: '系统管理员', password: 'admin123' },
-    { username: 'leader_a', role: 'manager', level: 1, cpsGroupCode: 'GroupA', realName: 'A组组长',    password: 'leader123' },
-    { username: 'leader_b', role: 'manager', level: 1, cpsGroupCode: 'GroupB', realName: 'B组组长',    password: 'leader123' },
-    { username: 'leader_c', role: 'manager', level: 1, cpsGroupCode: 'GroupC', realName: 'C组组长',    password: 'leader123' },
+    { username: 'admin',    role: 'admin',   level: 0, cpsGroupCode: null,     memberCode: null,      realName: '系统管理员', password: 'admin123' },
+    { username: 'leader_a', role: 'manager', level: 1, cpsGroupCode: 'GroupA', memberCode: 'A-0000',  realName: 'A组组长',    password: 'leader123' },
+    { username: 'leader_b', role: 'manager', level: 1, cpsGroupCode: 'GroupB', memberCode: 'B-0000',  realName: 'B组组长',    password: 'leader123' },
+    { username: 'leader_c', role: 'manager', level: 1, cpsGroupCode: 'GroupC', memberCode: 'C-0000',  realName: 'C组组长',    password: 'leader123' },
   ];
 
   // === 全部使用 upsert（幂等安全） ===
@@ -32,6 +32,7 @@ async function main() {
         level: account.level,
         role: account.role,
         cpsGroupCode: account.cpsGroupCode,
+        memberCode: account.memberCode,
         realName: account.realName,
         status: 1,
       },
@@ -43,6 +44,7 @@ async function main() {
         role: account.role,
         level: account.level,
         cpsGroupCode: account.cpsGroupCode,
+        memberCode: account.memberCode,
         status: 1,
       },
     });

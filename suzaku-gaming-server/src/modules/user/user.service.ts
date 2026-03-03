@@ -204,7 +204,12 @@ export class UserService {
     const passwordHash = await bcrypt.hash(dto.password, salt);
 
     // R3 + R15: 为 operator 自动生成组员编号（含并发重试）
+    // 组长固定编号 X-0000，组员从 X-0001 递增
     let memberCode: string | null = null;
+    if (dto.role === 'manager' && dto.cpsGroupCode) {
+      const prefix = dto.cpsGroupCode.replace('Group', '');
+      memberCode = `${prefix}-0000`;
+    }
     if (dto.role === 'operator' && dto.cpsGroupCode) {
       const MAX_RETRIES = 3;
       for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {

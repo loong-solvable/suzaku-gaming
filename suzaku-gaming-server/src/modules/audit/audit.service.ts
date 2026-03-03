@@ -97,10 +97,12 @@ export class AuditService {
       };
     }
 
-    // Operator (level === 2) 只能看自己的申请
-    return {
-      applicant: currentUser.username,
-    };
+    // Operator (level === 2) 看到自己提交的 + 别人为自己绑定的
+    const orConditions: any[] = [{ applicant: currentUser.username }];
+    if (currentUser.memberCode) {
+      orConditions.push({ teamMember: currentUser.memberCode });
+    }
+    return { OR: orConditions };
   }
 
   // ===== 列表查询 =====
@@ -214,9 +216,11 @@ export class AuditService {
           throw new NotFoundException('绑定申请不存在');
         }
       }
-      // Operator 只能查看自己的申请
+      // Operator: 自己提交的 或 别人为自己绑定的
       if (typeof level === 'number' && level === 2) {
-        if (apply.applicant !== currentUser.username) {
+        const isApplicant = apply.applicant === currentUser.username;
+        const isBoundMember = currentUser.memberCode && apply.teamMember === currentUser.memberCode;
+        if (!isApplicant && !isBoundMember) {
           throw new NotFoundException('绑定申请不存在');
         }
       }
@@ -501,7 +505,7 @@ export class AuditService {
 
     // 审批通过后回写数数平台 CPS 维度表（fire-and-forget，不阻塞返回）
     if (dto.action === 'approve') {
-      this.taDatatableService.writeCpsDim(apply.roleId, apply.platform || '')
+      this.taDatatableService.writeCpsDim(apply.roleId, apply.teamMember || '')
         .catch(() => {});
     }
 

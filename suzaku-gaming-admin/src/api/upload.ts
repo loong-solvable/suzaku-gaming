@@ -10,14 +10,16 @@ export interface UploadResult {
 }
 
 export const uploadApi = {
-  // 上传单个图片
-  uploadImage(file: File): Promise<UploadResult> {
+  uploadImage(file: File, onProgress?: (percent: number) => void): Promise<UploadResult> {
     const formData = new FormData();
     formData.append('file', file);
     return request.post('/upload/image', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
+      onUploadProgress: onProgress
+        ? (e) => { onProgress(e.total ? Math.round((e.loaded * 100) / e.total) : 0); }
+        : undefined,
     });
   },
 

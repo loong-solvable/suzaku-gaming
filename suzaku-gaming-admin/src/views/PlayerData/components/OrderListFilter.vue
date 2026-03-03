@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { reactive, watch } from "vue";
+import { reactive, ref, computed, watch, onMounted } from "vue";
+import { userApi } from "@/api/user";
 
 interface FilterValues {
   gameProject: string;
   server: string;
-  channel1: string;
-  channel2: string;
-  channel3: string;
+  cpsGroup: string;
+  teamMember: string;
   payChannel: string;
   system: string;
   timezone: string;
@@ -25,15 +25,31 @@ interface Emits {
   (e: "export"): void;
 }
 
+interface GroupOption {
+  id: number;
+  username: string;
+  realName: string;
+  cpsGroupCode?: string;
+}
+interface MemberOption {
+  id: number;
+  username: string;
+  realName: string;
+  cpsGroupCode?: string;
+  memberCode?: string;
+}
+
 const props = defineProps<Props>();
 const emit = defineEmits<Emits>();
+
+const groups = ref<GroupOption[]>([]);
+const members = ref<MemberOption[]>([]);
 
 const filterValues = reactive<FilterValues>({
   gameProject: "",
   server: "",
-  channel1: "",
-  channel2: "",
-  channel3: "",
+  cpsGroup: "",
+  teamMember: "",
   payChannel: "",
   system: "",
   timezone: "",
@@ -53,6 +69,42 @@ watch(
   { immediate: true }
 );
 
+// 选组后清空组员
+watch(() => filterValues.cpsGroup, () => {
+  filterValues.teamMember = "";
+});
+
+const groupOptions = computed(() =>
+  groups.value.map(g => ({
+    label: (g.cpsGroupCode || '').replace('Group', '') + '组',
+    value: g.cpsGroupCode || ''
+  }))
+);
+
+const memberOptions = computed(() => {
+  if (!filterValues.cpsGroup) return [];
+  return members.value
+    .filter(m => m.cpsGroupCode === filterValues.cpsGroup && m.memberCode)
+    .map(m => ({
+      label: `${m.memberCode} (${m.realName || m.username})`,
+      value: m.memberCode!
+    }));
+});
+
+const loadTeamData = async () => {
+  try {
+    const res = await userApi.getTeamOptions();
+    groups.value = res.groups || res.managers || [];
+    members.value = res.members || res.operators || [];
+  } catch (error) {
+    console.error('加载团队数据失败:', error);
+  }
+};
+
+onMounted(() => {
+  loadTeamData();
+});
+
 const gameProjectOptions = [
   { label: "海战", value: "warship" }
 ];
@@ -71,9 +123,6 @@ const serverOptions = [
   { label: "S30", value: "30" },
   { label: "S31", value: "31" }
 ];
-
-// 渠道选项（目前数据中暂无渠道信息，保留空选项）
-const channelOptions: Array<{ label: string; value: string }> = [];
 
 const payChannelOptions = [
   { label: "谷歌支付", value: "谷歌支付" },
@@ -99,14 +148,12 @@ const handleSearch = () => {
 };
 
 const handleReset = () => {
-  // 恢复默认时间范围
   const defaultRange = props.defaultDateRange;
   Object.assign(filterValues, {
     gameProject: "",
     server: "",
-    channel1: "",
-    channel2: "",
-    channel3: "",
+    cpsGroup: "",
+    teamMember: "",
     payChannel: "",
     system: "",
     timezone: "",
@@ -138,21 +185,15 @@ const handleExport = () => {
         </el-select>
       </div>
       <div class="filter-item">
-        <label class="filter-label">一级渠道：</label>
-        <el-select v-model="filterValues.channel1" size="small" clearable>
-          <el-option v-for="opt in channelOptions" :key="opt.value" :label="opt.label" :value="opt.value" />
+        <label class="filter-label">组：</label>
+        <el-select v-model="filterValues.cpsGroup" size="small" clearable filterable placeholder="全部">
+          <el-option v-for="opt in groupOptions" :key="opt.value" :label="opt.label" :value="opt.value" />
         </el-select>
       </div>
       <div class="filter-item">
-        <label class="filter-label">二级渠道：</label>
-        <el-select v-model="filterValues.channel2" size="small" clearable>
-          <el-option v-for="opt in channelOptions" :key="opt.value" :label="opt.label" :value="opt.value" />
-        </el-select>
-      </div>
-      <div class="filter-item">
-        <label class="filter-label">三级渠道：</label>
-        <el-select v-model="filterValues.channel3" size="small" clearable>
-          <el-option v-for="opt in channelOptions" :key="opt.value" :label="opt.label" :value="opt.value" />
+        <label class="filter-label">组员：</label>
+        <el-select v-model="filterValues.teamMember" size="small" clearable filterable placeholder="全部" :disabled="!filterValues.cpsGroup">
+          <el-option v-for="opt in memberOptions" :key="opt.value" :label="opt.label" :value="opt.value" />
         </el-select>
       </div>
     </div>

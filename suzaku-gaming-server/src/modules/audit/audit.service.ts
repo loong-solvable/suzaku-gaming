@@ -58,21 +58,6 @@ export class AuditService {
   }
 
   /**
-   * 判断 Manager 是否有权"审核"指定申请（R10）
-   * ★ 不包含 applicant 条件——防止"非本组但本人申请可审核"的语义漏洞
-   * 审核权限严格按组归属判定
-   */
-  private canManagerReview(
-    apply: { platform?: string | null; teamLeader?: string | null },
-    currentUser: CurrentUser,
-  ): boolean {
-    return (
-      apply.platform === currentUser.cpsGroupCode ||   // 新数据：组编码匹配
-      apply.teamLeader === currentUser.username          // 旧数据：组长名匹配
-    );
-  }
-
-  /**
    * 构建数据隔离过滤条件（R2 修正）
    * Admin: 可查看所有数据
    * Manager: 可查看本组（platform/teamLeader）及自己提交的数据
@@ -422,7 +407,7 @@ export class AuditService {
     return { message: '删除成功' };
   }
 
-  // ===== 审核申请（R10+R12+R19 全链路） =====
+  // ===== 审核申请（仅管理员 + R12 + R19 全链路） =====
 
   async reviewBindingApply(
     id: number,
@@ -441,14 +426,10 @@ export class AuditService {
       throw new BadRequestException('该申请已被审核');
     }
 
-    // R10: 权限校验——Manager 只能审核本组申请（使用 canManagerReview，不含 applicant）
-    if (typeof currentUser.level === 'number' && currentUser.level === 1) {
-      if (!this.canManagerReview(apply, currentUser)) {
-        throw new ForbiddenException('无权审核非本组的申请');
-      }
+    const isAdmin = currentUser.role === 'admin' || currentUser.level === 0;
+    if (!isAdmin) {
+      throw new ForbiddenException('仅管理员可审核归因申请');
     }
-    // Admin (level=0) 无限制
-    // Operator 无审核权限（已由 @Roles 守卫拦截）
 
     const newStatus = dto.action === 'approve' ? 'approved' : 'rejected';
 
@@ -604,6 +585,10 @@ export class AuditService {
   /**
    * 将数据转换为 CSV 格式
    */
+  private sanitizeCsvValue(value: string): string {
+    return /^[=+\-@]/.test(value) ? `'${value}` : value;
+  }
+
   private toCSV(
     data: any[],
     columns: { key: string; header: string }[],
@@ -647,7 +632,7 @@ export class AuditService {
           }
 
           // 转换为字符串并处理特殊字符
-          const strValue = String(value);
+          const strValue = this.sanitizeCsvValue(String(value));
           if (
             strValue.includes(',') ||
             strValue.includes('"') ||

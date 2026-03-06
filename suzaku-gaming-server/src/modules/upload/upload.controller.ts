@@ -1,31 +1,40 @@
 // src/modules/upload/upload.controller.ts
 import {
+  BadRequestException,
   Controller,
   Post,
-  UseInterceptors,
   UploadedFile,
   UploadedFiles,
-  BadRequestException,
+  UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
-import { ApiTags, ApiOperation, ApiConsumes, ApiBody, ApiBearerAuth } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiBody,
+  ApiConsumes,
+  ApiOperation,
+  ApiTags,
+} from '@nestjs/swagger';
 import { diskStorage } from 'multer';
-import { extname, join } from 'path';
-import { existsSync, mkdirSync } from 'fs';
+import { existsSync, mkdirSync, promises as fs } from 'fs';
+import { join } from 'path';
 import { Roles } from '../../common/decorators/roles.decorator';
 
-// 上传目录
 const UPLOAD_DIR = join(process.cwd(), 'uploads');
 
-// 确保上传目录存在
 if (!existsSync(UPLOAD_DIR)) {
   mkdirSync(UPLOAD_DIR, { recursive: true });
 }
 
-// 存储配置
+const MIME_EXTENSION_MAP: Record<string, string> = {
+  'image/jpeg': '.jpg',
+  'image/png': '.png',
+  'image/gif': '.gif',
+  'image/webp': '.webp',
+};
+
 const storage = diskStorage({
   destination: (req, file, cb) => {
-    // 按日期分目录
     const dateDir = new Date().toISOString().slice(0, 10).replace(/-/g, '');
     const uploadPath = join(UPLOAD_DIR, dateDir);
     if (!existsSync(uploadPath)) {
@@ -34,20 +43,61 @@ const storage = diskStorage({
     cb(null, uploadPath);
   },
   filename: (req, file, cb) => {
-    // 生成唯一文件名
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-    const ext = extname(file.originalname);
+    const ext = MIME_EXTENSION_MAP[file.mimetype];
+    if (!ext) {
+      cb(new BadRequestException('Unsupported file type'), '');
+      return;
+    }
     cb(null, `${uniqueSuffix}${ext}`);
   },
 });
 
-// 文件过滤器
 const imageFileFilter = (req: any, file: Express.Multer.File, cb: any) => {
-  const allowedMimes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+  const allowedMimes = Object.keys(MIME_EXTENSION_MAP);
   if (allowedMimes.includes(file.mimetype)) {
     cb(null, true);
   } else {
-    cb(new BadRequestException('只允许上传 JPG/PNG/GIF/WEBP 格式的图片'), false);
+    cb(new BadRequestException('Only JPG/PNG/GIF/WEBP images are allowed'), false);
+  }
+};
+
+const hasSignature = (buffer: Buffer, signature: number[]) =>
+  signature.every((byte, index) => buffer[index] === byte);
+
+const isValidImageSignature = (buffer: Buffer, mimetype: string): boolean => {
+  switch (mimetype) {
+    case 'image/jpeg':
+      return hasSignature(buffer, [0xff, 0xd8, 0xff]);
+    case 'image/png':
+      return hasSignature(buffer, [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+    case 'image/gif': {
+      const header = buffer.subarray(0, 6).toString('ascii');
+      return header === 'GIF87a' || header === 'GIF89a';
+    }
+    case 'image/webp':
+      return (
+        buffer.subarray(0, 4).toString('ascii') === 'RIFF' &&
+        buffer.subarray(8, 12).toString('ascii') === 'WEBP'
+      );
+    default:
+      return false;
+  }
+};
+
+const cleanupFiles = async (files: Express.Multer.File[]) => {
+  await Promise.allSettled(
+    files.map((file) => fs.unlink(file.path).catch(() => undefined)),
+  );
+};
+
+const assertValidImages = async (files: Express.Multer.File[]) => {
+  for (const file of files) {
+    const buffer = await fs.readFile(file.path);
+    if (!isValidImageSignature(buffer, file.mimetype)) {
+      await cleanupFiles(files);
+      throw new BadRequestException('Uploaded file content does not match image type');
+    }
   }
 };
 
@@ -62,11 +112,11 @@ export class UploadController {
       storage,
       fileFilter: imageFileFilter,
       limits: {
-        fileSize: 5 * 1024 * 1024, // 5MB
+        fileSize: 5 * 1024 * 1024,
       },
     }),
   )
-  @ApiOperation({ summary: '上传单个图片' })
+  @ApiOperation({ summary: 'Upload a single image' })
   @ApiConsumes('multipart/form-data')
   @ApiBody({
     schema: {
@@ -79,14 +129,15 @@ export class UploadController {
       },
     },
   })
-  uploadImage(@UploadedFile() file: Express.Multer.File) {
+  async uploadImage(@UploadedFile() file: Express.Multer.File) {
     if (!file) {
-      throw new BadRequestException('请选择要上传的文件');
+      throw new BadRequestException('Please select a file to upload');
     }
 
-    // 返回相对路径
+    await assertValidImages([file]);
+
     const relativePath = file.path.replace(process.cwd(), '').replace(/\\/g, '/');
-    
+
     return {
       filename: file.filename,
       originalname: file.originalname,
@@ -103,11 +154,11 @@ export class UploadController {
       storage,
       fileFilter: imageFileFilter,
       limits: {
-        fileSize: 5 * 1024 * 1024, // 5MB per file
+        fileSize: 5 * 1024 * 1024,
       },
     }),
   )
-  @ApiOperation({ summary: '上传多个图片（最多5个）' })
+  @ApiOperation({ summary: 'Upload up to 5 images' })
   @ApiConsumes('multipart/form-data')
   @ApiBody({
     schema: {
@@ -123,10 +174,12 @@ export class UploadController {
       },
     },
   })
-  uploadImages(@UploadedFiles() files: Express.Multer.File[]) {
+  async uploadImages(@UploadedFiles() files: Express.Multer.File[]) {
     if (!files || files.length === 0) {
-      throw new BadRequestException('请选择要上传的文件');
+      throw new BadRequestException('Please select files to upload');
     }
+
+    await assertValidImages(files);
 
     return files.map((file) => {
       const relativePath = file.path.replace(process.cwd(), '').replace(/\\/g, '/');

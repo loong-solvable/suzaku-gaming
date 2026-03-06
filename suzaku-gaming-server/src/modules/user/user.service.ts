@@ -341,6 +341,13 @@ export class UserService {
     }
 
     // 不能修改自己的角色
+    if (
+      currentUser.level === 1 &&
+      (dto.parentId !== undefined || dto.cpsGroupCode !== undefined)
+    ) {
+      throw new ForbiddenException('鏃犳潈淇敼鐢ㄦ埛褰掑睘淇℃伅');
+    }
+
     if (id === currentUser.id && dto.role && dto.role !== currentUser.role) {
       throw new BadRequestException('不能修改自己的角色');
     }

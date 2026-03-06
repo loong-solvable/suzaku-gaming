@@ -4,9 +4,11 @@ import { useRouter } from "vue-router";
 import { ElMessage, ElMessageBox } from "element-plus";
 import BindingApplyFilter from "./components/BindingApplyFilter.vue";
 import { auditApi } from "@/api/audit";
+import { useUserStore } from "@/stores/user";
 import type { PaginationConfig } from "@/types/components";
 
 const router = useRouter();
+const userStore = useUserStore();
 
 // 表格列定义 - 按目标顺序
 const tableColumns = [
@@ -159,6 +161,10 @@ const submitEdit = async () => {
 
 // 打开审核弹窗
 const handleReview = (row: Record<string, unknown>, action: 'approve' | 'reject') => {
+  if (!userStore.isAdmin) {
+    ElMessage.error("仅管理员可审核归因申请");
+    return;
+  }
   reviewRow.value = row;
   reviewAction.value = action;
   reviewRemark.value = '';
@@ -168,6 +174,10 @@ const handleReview = (row: Record<string, unknown>, action: 'approve' | 'reject'
 // 提交审核
 const submitReview = async () => {
   if (!reviewRow.value) return;
+  if (!userStore.isAdmin) {
+    ElMessage.error("仅管理员可审核归因申请");
+    return;
+  }
   try {
     await auditApi.reviewBindingApply(
       reviewRow.value.id as number,
@@ -318,8 +328,10 @@ onMounted(() => {
             <div class="action-btns">
               <el-button type="primary" size="small" @click="handleView(row)">查看</el-button>
               <template v-if="row.status === 'pending'">
-                <el-button type="success" size="small" @click="handleReview(row, 'approve')">通过</el-button>
-                <el-button type="warning" size="small" @click="handleReview(row, 'reject')">拒绝</el-button>
+                <template v-if="userStore.isAdmin">
+                  <el-button type="success" size="small" @click="handleReview(row, 'approve')">通过</el-button>
+                  <el-button type="warning" size="small" @click="handleReview(row, 'reject')">拒绝</el-button>
+                </template>
                 <el-button size="small" @click="handleEdit(row)">编辑</el-button>
               </template>
               <el-button type="danger" size="small" @click="handleDelete(row)">删除</el-button>

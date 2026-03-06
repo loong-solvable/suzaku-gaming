@@ -1,5 +1,10 @@
 // src/modules/cps/cps.service.ts
-import { Injectable, Logger, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  BadRequestException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../shared/prisma/prisma.service';
 import { Prisma } from '@prisma/client';
@@ -100,6 +105,59 @@ export class CpsService {
    * 检查角色是否可绑定
    * 判断逻辑：查询 tf_medium，只有 Organic / 自然量 / WA_CPS_link% 才允许绑定
    */
+  private escapeSqlLiteral(value: string): string {
+    return value.replace(/'/g, "''");
+  }
+
+  private ensureBindingCreateAccess(currentUser: CurrentUser, cpsGroup: string) {
+    if (currentUser.level === 0) {
+      return;
+    }
+
+    if (!currentUser.cpsGroupCode || currentUser.cpsGroupCode !== cpsGroup) {
+      /*
+      throw new ForbiddenException('鏃犳潈鎿嶄綔鍏朵粬鍒嗙粍鐨勭粦瀹氭暟鎹?);
+    }
+  }
+
+      */
+      throw new ForbiddenException('You cannot create bindings for another CPS group');
+    }
+  }
+
+  private ensureBindingCancelAccess(
+    currentUser: CurrentUser,
+    binding: { cpsGroup: string; operatorId: number },
+  ) {
+    if (currentUser.level === 0) {
+      return;
+    }
+
+    if (currentUser.level === 1) {
+      if (currentUser.cpsGroupCode && currentUser.cpsGroupCode === binding.cpsGroup) {
+        return;
+      }
+      /*
+      throw new ForbiddenException('鏃犳潈鍙栨秷闈炴湰缁勭殑缁戝畾');
+    }
+
+      */
+      throw new ForbiddenException('You cannot cancel bindings outside your CPS group');
+    }
+
+    if (currentUser.id === binding.operatorId) {
+      return;
+    }
+
+    /*
+
+    throw new ForbiddenException('鏃犳潈鍙栨秷闈炶嚜宸辩殑缁戝畾');
+  }
+
+    */
+    throw new ForbiddenException('You cannot cancel bindings created by another user');
+  }
+
   async checkBinding(dto: CheckBindingDto): Promise<CheckBindingResponseDto> {
     const { roleId, accountId } = dto;
 
@@ -207,10 +265,11 @@ export class CpsService {
    * 查询 ThinkingData tf_medium 字段
    */
   private async queryTfMedium(accountId: string): Promise<string | null> {
+    const safeAccountId = this.escapeSqlLiteral(accountId);
     const sql = `
       SELECT "#account_id", "tf_medium"
       FROM ${this.userView}
-      WHERE "#account_id" = '${accountId}'
+      WHERE "#account_id" = '${safeAccountId}'
     `.trim();
 
     const response = await this.executeQuery(sql);
@@ -288,10 +347,13 @@ export class CpsService {
    */
   async createBinding(
     dto: CreateBindingDto,
-    operatorId: number,
-    operatorType: string,
+    currentUser: CurrentUser,
   ): Promise<CreateBindingResponseDto> {
     const { roleId, accountId, cpsGroup, attachments, remark } = dto;
+    const operatorId = currentUser.id;
+    const operatorType = currentUser.role;
+
+    this.ensureBindingCreateAccess(currentUser, cpsGroup);
 
     // 1. 先检查是否可绑定
     const checkResult = await this.checkBinding({ roleId, accountId });
@@ -369,7 +431,10 @@ export class CpsService {
   /**
    * 取消 CPS 绑定
    */
-  async cancelBinding(bindingId: number, operatorId: number): Promise<{ success: boolean; error?: string }> {
+  async cancelBinding(
+    bindingId: number,
+    currentUser: CurrentUser,
+  ): Promise<{ success: boolean; error?: string }> {
     const binding = await this.prisma.cpsBinding.findUnique({
       where: { id: bindingId },
     });
@@ -381,6 +446,8 @@ export class CpsService {
     if (binding.status === 'cancelled') {
       return { success: false, error: '该绑定已被取消' };
     }
+
+    this.ensureBindingCancelAccess(currentUser, binding);
 
     await this.prisma.$transaction(async (tx) => {
       // 更新绑定状态

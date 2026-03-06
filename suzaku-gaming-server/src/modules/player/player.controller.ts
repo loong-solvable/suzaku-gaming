@@ -1,6 +1,6 @@
 // src/modules/player/player.controller.ts
-import { Controller, Get, Query, Res } from '@nestjs/common';
-import { Response } from 'express';
+import { Controller, Get, Query, Req, Res } from '@nestjs/common';
+import { Request, Response } from 'express';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { PlayerService } from './player.service';
 import { QueryRolesDto } from './dto/query-roles.dto';
@@ -16,15 +16,19 @@ export class PlayerController {
   @Get('roles')
   @Roles('admin', 'manager', 'operator')
   @ApiOperation({ summary: '获取角色列表' })
-  async getRoles(@Query() query: QueryRolesDto) {
-    return this.playerService.getRoles(query);
+  async getRoles(@Query() query: QueryRolesDto, @Req() req: Request) {
+    return this.playerService.getRoles(query, (req as any).user);
   }
 
   @Get('roles/export')
   @Roles('admin', 'manager', 'operator')
   @ApiOperation({ summary: '导出角色列表' })
-  async exportRoles(@Query() query: QueryRolesDto, @Res() res: Response) {
-    const csv = await this.playerService.exportRoles(query);
+  async exportRoles(
+    @Query() query: QueryRolesDto,
+    @Req() req: Request,
+    @Res() res: Response,
+  ) {
+    const csv = await this.playerService.exportRoles(query, (req as any).user);
 
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader(
@@ -38,15 +42,19 @@ export class PlayerController {
   @Get('orders')
   @Roles('admin', 'manager', 'operator')
   @ApiOperation({ summary: '获取订单列表' })
-  async getOrders(@Query() query: QueryOrdersDto) {
-    return this.playerService.getOrders(query);
+  async getOrders(@Query() query: QueryOrdersDto, @Req() req: Request) {
+    return this.playerService.getOrders(query, (req as any).user);
   }
 
   @Get('orders/export')
   @Roles('admin', 'manager', 'operator')
   @ApiOperation({ summary: '导出订单列表' })
-  async exportOrders(@Query() query: QueryOrdersDto, @Res() res: Response) {
-    const csv = await this.playerService.exportOrders(query);
+  async exportOrders(
+    @Query() query: QueryOrdersDto,
+    @Req() req: Request,
+    @Res() res: Response,
+  ) {
+    const csv = await this.playerService.exportOrders(query, (req as any).user);
 
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader(

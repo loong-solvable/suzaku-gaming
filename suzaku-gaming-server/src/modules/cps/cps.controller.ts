@@ -53,9 +53,7 @@ export class CpsController {
     @Body() dto: CreateBindingDto,
     @Req() req: any,
   ): Promise<CreateBindingResponseDto> {
-    const operatorId = req.user.id;
-    const operatorType = req.user.role;
-    return this.cpsService.createBinding(dto, operatorId, operatorType);
+    return this.cpsService.createBinding(dto, req.user);
   }
 
   @Delete('binding/:id')
@@ -65,7 +63,7 @@ export class CpsController {
     @Param('id', ParseIntPipe) id: number,
     @Req() req: any,
   ) {
-    return this.cpsService.cancelBinding(id, req.user.id);
+    return this.cpsService.cancelBinding(id, req.user);
   }
 
   @Get('binding/list')

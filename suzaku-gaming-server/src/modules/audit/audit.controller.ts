@@ -96,14 +96,14 @@ export class AuditController {
   }
 
   @Post('binding-applies/:id/review')
-  @Roles('admin', 'manager')
+  @Roles('admin')
   @ApiOperation({ summary: '审核绑定申请' })
   async reviewBindingApply(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: ReviewBindingApplyDto,
     @Req() req: Request,
   ) {
-    // R10: 传完整 currentUser 用于组权限校验
+    // 仅管理员可审核，服务层仍会进行二次校验
     return this.auditService.reviewBindingApply(id, dto, (req as any).user);
   }
 

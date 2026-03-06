@@ -2,7 +2,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
-import { ThrottlerModule } from '@nestjs/throttler';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { APP_GUARD } from '@nestjs/core';
 import { join } from 'path';
@@ -47,6 +47,12 @@ import { RolesGuard } from './common/guards/roles.guard';
       serveRoot: '/uploads',
       serveStaticOptions: {
         index: false,
+        setHeaders: (res, filePath) => {
+          res.setHeader('X-Content-Type-Options', 'nosniff');
+          if (/\.(html?|js|mjs|svg)$/i.test(filePath)) {
+            res.setHeader('Content-Disposition', 'attachment');
+          }
+        },
       },
     }),
 
@@ -66,6 +72,10 @@ import { RolesGuard } from './common/guards/roles.guard';
     {
       provide: APP_GUARD,
       useClass: JwtAuthGuard,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
     },
     {
       provide: APP_GUARD,

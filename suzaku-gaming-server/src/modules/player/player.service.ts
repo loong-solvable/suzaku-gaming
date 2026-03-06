@@ -4,6 +4,7 @@ import { PrismaService } from '../../shared/prisma/prisma.service';
 import { QueryRolesDto } from './dto/query-roles.dto';
 import { QueryOrdersDto } from './dto/query-orders.dto';
 import { Prisma } from '@prisma/client';
+import type { CurrentUser } from '../../common/interfaces/current-user.interface';
 
 // CSV 导出列配置
 const ROLE_EXPORT_COLUMNS = [
@@ -46,7 +47,72 @@ const ORDER_EXPORT_COLUMNS = [
 export class PlayerService {
   constructor(private prisma: PrismaService) {}
 
-  async getRoles(query: QueryRolesDto) {
+  private async getScopedRoleIds(currentUser: CurrentUser): Promise<string[]> {
+    if (currentUser.level !== 2) {
+      return [];
+    }
+
+    const accessConditions: Prisma.BindingApplyWhereInput[] = [
+      { applicant: currentUser.username },
+    ];
+
+    if (currentUser.memberCode) {
+      accessConditions.push({ teamMember: currentUser.memberCode });
+    }
+
+    const applies = await this.prisma.bindingApply.findMany({
+      where: {
+        status: 'approved',
+        OR: accessConditions,
+      },
+      select: { roleId: true },
+    });
+
+    return [...new Set(applies.map((item) => item.roleId))];
+  }
+
+  private async applyRoleScope(where: any, currentUser: CurrentUser) {
+    if (currentUser.level === 0) {
+      return;
+    }
+
+    if (currentUser.level === 1) {
+      where.AND = [...(where.AND || []), { cpsGroup: currentUser.cpsGroupCode || '__NO_ACCESS__' }];
+      return;
+    }
+
+    const roleIds = await this.getScopedRoleIds(currentUser);
+    where.AND = [
+      ...(where.AND || []),
+      { roleId: { in: roleIds.length > 0 ? roleIds : ['__NO_ACCESS__'] } },
+    ];
+  }
+
+  private async applyOrderScope(where: any, currentUser: CurrentUser) {
+    if (currentUser.level === 0) {
+      return;
+    }
+
+    if (currentUser.level === 1) {
+      where.role = {
+        ...where.role,
+        cpsGroup: currentUser.cpsGroupCode || '__NO_ACCESS__',
+      };
+      return;
+    }
+
+    const roleIds = await this.getScopedRoleIds(currentUser);
+    where.AND = [
+      ...(where.AND || []),
+      { roleId: { in: roleIds.length > 0 ? roleIds : ['__NO_ACCESS__'] } },
+    ];
+  }
+
+  private sanitizeCsvValue(value: string): string {
+    return /^[=+\-@]/.test(value) ? `'${value}` : value;
+  }
+
+  async getRoles(query: QueryRolesDto, currentUser: CurrentUser) {
     const {
       page = 1,
       pageSize = 20,
@@ -68,6 +134,7 @@ export class PlayerService {
 
     // P7: 仅展示已归因角色
     const where: any = { cpsVisible: true };
+    await this.applyRoleScope(where, currentUser);
 
     // CPS 分组筛选（直接查 roles.cpsGroup）
     if (cpsGroup) {
@@ -213,7 +280,7 @@ export class PlayerService {
     };
   }
 
-  async getOrders(query: QueryOrdersDto) {
+  async getOrders(query: QueryOrdersDto, currentUser: CurrentUser) {
     const {
       page = 1,
       pageSize = 20,
@@ -235,6 +302,7 @@ export class PlayerService {
 
     // P7: 仅展示已归因角色的订单
     const where: any = { role: { cpsVisible: true } };
+    await this.applyOrderScope(where, currentUser);
 
     // CPS 分组筛选（通过关联角色的 cpsGroup）
     if (cpsGroup) {
@@ -388,7 +456,7 @@ export class PlayerService {
   /**
    * 导出角色列表为 CSV
    */
-  async exportRoles(query: QueryRolesDto): Promise<string> {
+  async exportRoles(query: QueryRolesDto, currentUser: CurrentUser): Promise<string> {
     const {
       roleId,
       roleName,
@@ -406,6 +474,7 @@ export class PlayerService {
 
     // P7: 导出也仅含已归因角色
     const where: any = { cpsVisible: true };
+    await this.applyRoleScope(where, currentUser);
 
     if (roleId) {
       where.roleId = { contains: roleId };
@@ -507,7 +576,7 @@ export class PlayerService {
   /**
    * 导出订单列表为 CSV
    */
-  async exportOrders(query: QueryOrdersDto): Promise<string> {
+  async exportOrders(query: QueryOrdersDto, currentUser: CurrentUser): Promise<string> {
     const {
       roleId,
       roleName,
@@ -524,6 +593,7 @@ export class PlayerService {
 
     // P7: 导出也仅含已归因角色的订单
     const where: any = { role: { cpsVisible: true } };
+    await this.applyOrderScope(where, currentUser);
 
     if (roleId) {
       where.roleId = { contains: roleId };
@@ -641,7 +711,7 @@ export class PlayerService {
           }
 
           // 转换为字符串并处理特殊字符
-          const strValue = String(value);
+          const strValue = this.sanitizeCsvValue(String(value));
           // 如果包含逗号、引号或换行符，需要用引号包裹
           if (
             strValue.includes(',') ||

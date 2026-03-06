@@ -2,6 +2,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../shared/prisma/prisma.service';
+import { Prisma } from '@prisma/client';
 import axios, { AxiosError } from 'axios';
 import dayjs from 'dayjs';
 import { TAQueryResponse, TASyncResult, TAUserBehavior } from './interfaces/ta-response.interface';
@@ -980,23 +981,29 @@ export class ThinkingDataService {
       const batch = loginRecords.slice(i, i + BATCH_SIZE);
       
       // 构建批量更新 SQL (使用 PostgreSQL 的 CASE WHEN)
-      const caseWhen = batch.map(r => 
-        `WHEN role_id = '${r.accountId}' OR account_id = '${r.accountId}' THEN '${r.lastLoginTime.toISOString()}'::timestamp`
-      ).join('\n        ');
-      
-      const accountIds = batch.map(r => `'${r.accountId}'`).join(', ');
-      
-      const sql = `
-        UPDATE roles 
-        SET last_login_time = CASE 
-        ${caseWhen}
-        ELSE last_login_time END,
-        updated_at = NOW()
-        WHERE role_id IN (${accountIds}) OR account_id IN (${accountIds})
-      `;
+      const latestLoginMap = new Map<string, Date>();
+      batch.forEach((record) => {
+        latestLoginMap.set(record.accountId, record.lastLoginTime);
+      });
+
+      const values = Array.from(latestLoginMap.entries()).map(([accountId, lastLoginTime]) =>
+        Prisma.sql`(${accountId}, ${lastLoginTime})`,
+      );
+
+      if (values.length === 0) {
+        continue;
+      }
 
       try {
-        const result = await this.prisma.$executeRawUnsafe(sql);
+        const result = await this.prisma.$executeRaw(
+          Prisma.sql`
+            UPDATE roles AS r
+            SET last_login_time = v.last_login_time,
+                updated_at = NOW()
+            FROM (VALUES ${Prisma.join(values)}) AS v(account_id, last_login_time)
+            WHERE r.role_id = v.account_id OR r.account_id = v.account_id
+          `,
+        );
         updatedCount += Number(result);
         
         if ((i + BATCH_SIZE) % 2000 === 0 || i + BATCH_SIZE >= loginRecords.length) {

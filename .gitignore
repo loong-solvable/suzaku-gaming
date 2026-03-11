@@ -21,3 +21,12 @@ suzaku-gaming-server/uploads/
 # 忽略补全计划文件夹
 补全计划/
 suzaku-gaming-admin/补全计划/
+
+# 敏感配置与生成文件
+login.json
+review.json
+suzaku-gaming-admin/playwright-report/
+suzaku-gaming-admin/test-results/
+suzaku-gaming-admin/tsconfig.tsbuildinfo
+suzaku-gaming-admin/vite.config.local.ts
+suzaku-gaming-admin/dashboard-*.png

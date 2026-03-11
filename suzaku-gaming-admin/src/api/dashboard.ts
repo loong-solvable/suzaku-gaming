@@ -7,18 +7,24 @@ export interface DashboardStats {
     activePlayers: number;
     paidPlayers: number;
     paidAmount: number;
+    ingameAmount: number;
+    thirdpartyAmount: number;
   };
   monthly: {
     newPlayers: number;
     activePlayers: number;
     paidPlayers: number;
     paidAmount: number;
+    ingameAmount: number;
+    thirdpartyAmount: number;
   };
   total: {
     newPlayers: number;
     activePlayers: number;
     paidPlayers: number;
     paidAmount: number;
+    ingameAmount: number;
+    thirdpartyAmount: number;
   };
 }
 

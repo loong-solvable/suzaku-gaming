@@ -11,10 +11,16 @@ interface DashboardMetricsRow {
   total_players: number;
   today_paid_players: number;
   today_paid_amount: number;
+  today_ingame_amount: number;
+  today_thirdparty_amount: number;
   month_paid_players: number;
   month_paid_amount: number;
+  month_ingame_amount: number;
+  month_thirdparty_amount: number;
   total_paid_players: number;
   total_paid_amount: number;
+  total_ingame_amount: number;
+  total_thirdparty_amount: number;
 }
 
 @Injectable()
@@ -68,10 +74,16 @@ export class DashboardService {
         SELECT
           COUNT(DISTINCT o.role_id) FILTER (WHERE o.pay_time >= ${todayStart} AND o.pay_time < ${tomorrow})::int AS today_paid_players,
           COALESCE(SUM(o.pay_amount_usd) FILTER (WHERE o.pay_time >= ${todayStart} AND o.pay_time < ${tomorrow}), 0)::double precision AS today_paid_amount,
+          COALESCE(SUM(o.pay_amount_usd) FILTER (WHERE o.pay_time >= ${todayStart} AND o.pay_time < ${tomorrow} AND (o.pay_channel IS NULL OR o.pay_channel != '平台支付')), 0)::double precision AS today_ingame_amount,
+          COALESCE(SUM(o.pay_amount_usd) FILTER (WHERE o.pay_time >= ${todayStart} AND o.pay_time < ${tomorrow} AND o.pay_channel = '平台支付'), 0)::double precision AS today_thirdparty_amount,
           COUNT(DISTINCT o.role_id) FILTER (WHERE o.pay_time >= ${monthStart} AND o.pay_time < ${nextMonth})::int AS month_paid_players,
           COALESCE(SUM(o.pay_amount_usd) FILTER (WHERE o.pay_time >= ${monthStart} AND o.pay_time < ${nextMonth}), 0)::double precision AS month_paid_amount,
+          COALESCE(SUM(o.pay_amount_usd) FILTER (WHERE o.pay_time >= ${monthStart} AND o.pay_time < ${nextMonth} AND (o.pay_channel IS NULL OR o.pay_channel != '平台支付')), 0)::double precision AS month_ingame_amount,
+          COALESCE(SUM(o.pay_amount_usd) FILTER (WHERE o.pay_time >= ${monthStart} AND o.pay_time < ${nextMonth} AND o.pay_channel = '平台支付'), 0)::double precision AS month_thirdparty_amount,
           COUNT(DISTINCT o.role_id)::int AS total_paid_players,
-          COALESCE(SUM(o.pay_amount_usd), 0)::double precision AS total_paid_amount
+          COALESCE(SUM(o.pay_amount_usd), 0)::double precision AS total_paid_amount,
+          COALESCE(SUM(o.pay_amount_usd) FILTER (WHERE o.pay_channel IS NULL OR o.pay_channel != '平台支付'), 0)::double precision AS total_ingame_amount,
+          COALESCE(SUM(o.pay_amount_usd) FILTER (WHERE o.pay_channel = '平台支付'), 0)::double precision AS total_thirdparty_amount
         FROM orders o
         INNER JOIN scoped_roles sr ON sr.role_id = o.role_id
         WHERE o.is_sandbox = false
@@ -89,18 +101,24 @@ export class DashboardService {
         activePlayers: (row?.today_new_players || row?.today_paid_players) ?? 0,
         paidPlayers: row?.today_paid_players ?? 0,
         paidAmount: row?.today_paid_amount ?? 0,
+        ingameAmount: row?.today_ingame_amount ?? 0,
+        thirdpartyAmount: row?.today_thirdparty_amount ?? 0,
       },
       monthly: {
         newPlayers: row?.month_new_players ?? 0,
         activePlayers: (row?.month_new_players || row?.month_paid_players) ?? 0,
         paidPlayers: row?.month_paid_players ?? 0,
         paidAmount: row?.month_paid_amount ?? 0,
+        ingameAmount: row?.month_ingame_amount ?? 0,
+        thirdpartyAmount: row?.month_thirdparty_amount ?? 0,
       },
       total: {
         newPlayers: row?.total_players ?? 0,
         activePlayers: (row?.total_players || row?.total_paid_players) ?? 0,
         paidPlayers: row?.total_paid_players ?? 0,
         paidAmount: row?.total_paid_amount ?? 0,
+        ingameAmount: row?.total_ingame_amount ?? 0,
+        thirdpartyAmount: row?.total_thirdparty_amount ?? 0,
       },
     };
   }

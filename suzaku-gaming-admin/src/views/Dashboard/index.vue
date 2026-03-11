@@ -10,18 +10,24 @@ interface DashboardData {
     activePlayers: number;
     paidPlayers: number;
     paidAmount: number;
+    ingameAmount: number;
+    thirdpartyAmount: number;
   };
   monthly: {
     newPlayers: number;
     activePlayers: number;
     paidPlayers: number;
     paidAmount: number;
+    ingameAmount: number;
+    thirdpartyAmount: number;
   };
   total: {
     newPlayers: number;
     activePlayers: number;
     paidPlayers: number;
     paidAmount: number;
+    ingameAmount: number;
+    thirdpartyAmount: number;
   };
 }
 
@@ -36,7 +42,9 @@ const cardGroups = [
       { key: "today.newPlayers", title: "新增玩家", dateRange: "今日", unit: "人" },
       { key: "today.activePlayers", title: "活跃玩家", dateRange: "今日", unit: "人" },
       { key: "today.paidPlayers", title: "付费玩家", dateRange: "今日", unit: "人" },
-      { key: "today.paidAmount", title: "充值金额", dateRange: "今日", unit: "USD" }
+      { key: "today.paidAmount", title: "充值金额", dateRange: "今日", unit: "USD" },
+      { key: "today.ingameAmount", title: "游戏内充值金额", dateRange: "今日", unit: "USD" },
+      { key: "today.thirdpartyAmount", title: "三方充值金额", dateRange: "今日", unit: "USD" }
     ]
   },
   {
@@ -45,7 +53,9 @@ const cardGroups = [
       { key: "monthly.newPlayers", title: "新增玩家", dateRange: "本月", unit: "人" },
       { key: "monthly.activePlayers", title: "活跃玩家", dateRange: "本月", unit: "人" },
       { key: "monthly.paidPlayers", title: "付费玩家", dateRange: "本月", unit: "人" },
-      { key: "monthly.paidAmount", title: "充值金额", dateRange: "本月", unit: "USD" }
+      { key: "monthly.paidAmount", title: "充值金额", dateRange: "本月", unit: "USD" },
+      { key: "monthly.ingameAmount", title: "游戏内充值金额", dateRange: "本月", unit: "USD" },
+      { key: "monthly.thirdpartyAmount", title: "三方充值金额", dateRange: "本月", unit: "USD" }
     ]
   },
   {
@@ -54,7 +64,9 @@ const cardGroups = [
       { key: "total.newPlayers", title: "新增玩家", dateRange: "历史累计", unit: "人" },
       { key: "total.activePlayers", title: "活跃玩家", dateRange: "历史累计", unit: "人" },
       { key: "total.paidPlayers", title: "付费玩家", dateRange: "历史累计", unit: "人" },
-      { key: "total.paidAmount", title: "充值金额", dateRange: "历史累计", unit: "USD" }
+      { key: "total.paidAmount", title: "充值金额", dateRange: "历史累计", unit: "USD" },
+      { key: "total.ingameAmount", title: "游戏内充值金额", dateRange: "历史累计", unit: "USD" },
+      { key: "total.thirdpartyAmount", title: "三方充值金额", dateRange: "历史累计", unit: "USD" }
     ]
   }
 ];
@@ -126,13 +138,13 @@ onMounted(() => {
 
 .dashboard-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(6, 1fr);
   gap: 20px;
 }
 
-@media (max-width: 1280px) {
+@media (max-width: 1600px) {
   .dashboard-grid {
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(3, 1fr);
   }
 }
 
